@@ -1339,6 +1339,9 @@ class EmailView(QWidget):
         self.setup_ui()
         self.setup_connections()
         
+        # Initialize preview position to default
+        self.preview_position = "bottom"
+        
         # Auto-refresh timer
         self.refresh_timer = QTimer()
         self.refresh_timer.timeout.connect(self.refresh_current_folder)
@@ -1361,30 +1364,30 @@ class EmailView(QWidget):
         layout.addWidget(self.search_widget)
         
         # Create main splitter
-        main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
         
         # Left pane: Folder tree
         self.folder_tree = FolderTreeWidget()
-        main_splitter.addWidget(self.folder_tree)
+        self.main_splitter.addWidget(self.folder_tree)
         
         # Right pane: Message list and preview
-        right_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.right_splitter = QSplitter(Qt.Orientation.Vertical)
         
         # Message list
         self.message_list = ThreadedMessageListWidget()
-        right_splitter.addWidget(self.message_list)
+        self.right_splitter.addWidget(self.message_list)
         
         # Message preview
         self.message_preview = MessagePreviewWidget()
-        right_splitter.addWidget(self.message_preview)
+        self.right_splitter.addWidget(self.message_preview)
         
         # Set splitter proportions - make message list much bigger
-        right_splitter.setSizes([500, 300])  # Give more space to message list
+        self.right_splitter.setSizes([500, 300])  # Give more space to message list
         
-        main_splitter.addWidget(right_splitter)
-        main_splitter.setSizes([300, 800])  # Give more space to right pane
+        self.main_splitter.addWidget(self.right_splitter)
+        self.main_splitter.setSizes([300, 800])  # Give more space to right pane
         
-        layout.addWidget(main_splitter)
+        layout.addWidget(self.main_splitter)
         
         # Remove own status bar - will use main window's status bar
     
@@ -1458,6 +1461,44 @@ class EmailView(QWidget):
         """Set the app config for column width persistence."""
         self.config = config
         self.message_list.set_config(config)
+    
+    def set_preview_pane_position(self, position: str):
+        """
+        Set the preview pane position.
+        
+        Args:
+            position: Position of preview pane: 'off', 'right', or 'bottom'
+        """
+        if not hasattr(self, 'main_splitter') or not hasattr(self, 'right_splitter'):
+            return
+        
+        # Store the position
+        self.preview_position = position
+        
+        if position == "off":
+            # Hide the preview pane
+            self.message_preview.setVisible(False)
+        elif position == "right":
+            # Horizontal layout: message list on left, preview on right
+            self.message_preview.setVisible(True)
+            
+            # Change right splitter to horizontal
+            self.right_splitter.setOrientation(Qt.Orientation.Horizontal)
+            # Adjust proportions: more space for message list
+            self.right_splitter.setSizes([400, 300])
+        elif position == "bottom":
+            # Vertical layout: message list on top, preview on bottom
+            self.message_preview.setVisible(True)
+            
+            # Change right splitter to vertical
+            self.right_splitter.setOrientation(Qt.Orientation.Vertical)
+            # Adjust proportions: more space for message list
+            self.right_splitter.setSizes([500, 300])
+        
+        # Update config if available
+        if hasattr(self, 'config') and self.config:
+            self.config.ui.preview_pane_position = position
+            self.config.save()
     
     def load_accounts(self, accounts: List[Account]):
         """Load accounts and their folders into the folder tree."""

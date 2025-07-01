@@ -173,6 +173,9 @@ class AdelfahMainWindow(QMainWindow):
         # Ensure initial module state is synchronized
         self._synchronize_initial_state()
         
+        # Apply initial preview pane position from config
+        self._update_preview_pane_menu()
+        
         self.logger.info("Main window initialized")
     
     def _synchronize_initial_state(self) -> None:
@@ -360,6 +363,39 @@ class AdelfahMainWindow(QMainWindow):
         }
         module_name = module_names.get(module_id, "Email")
         self.setWindowTitle(f"Adelfa Personal Information Manager - {module_name}")
+    
+    def _set_preview_pane_position(self, position: str) -> None:
+        """
+        Set the preview pane position.
+        
+        Args:
+            position: Position of preview pane: 'off', 'right', or 'bottom'
+        """
+        if hasattr(self, 'email_widget') and self.email_widget:
+            self.email_widget.set_preview_pane_position(position)
+            
+        # Update config
+        self.config.ui.preview_pane_position = position
+        self.config.save()
+        
+        # Update menu state
+        self.preview_off_action.setChecked(position == "off")
+        self.preview_right_action.setChecked(position == "right")
+        self.preview_bottom_action.setChecked(position == "bottom")
+    
+    def _update_preview_pane_menu(self) -> None:
+        """Update preview pane menu state from config."""
+        position = self.config.ui.preview_pane_position
+        
+        # Check if menu actions exist before updating them
+        if hasattr(self, 'preview_off_action'):
+            self.preview_off_action.setChecked(position == "off")
+            self.preview_right_action.setChecked(position == "right")
+            self.preview_bottom_action.setChecked(position == "bottom")
+        
+        # Apply the position to email view if it exists
+        if hasattr(self, 'email_widget') and self.email_widget:
+            self.email_widget.set_preview_pane_position(position)
     
     def _create_folder_tree(self) -> QTreeWidget:
         """
@@ -576,9 +612,30 @@ class AdelfahMainWindow(QMainWindow):
         toggle_navigation_action.setShortcut("F9")
         view_menu.addAction(toggle_navigation_action)
         
-        toggle_preview_action = QAction("Toggle Preview Pane", self)
-        toggle_preview_action.setShortcut("F3")
-        view_menu.addAction(toggle_preview_action)
+        # Preview pane submenu
+        preview_pane_menu = view_menu.addMenu("Preview Pane")
+        
+        # Create action group for radio button behavior
+        from PyQt6.QtGui import QActionGroup
+        self.preview_pane_group = QActionGroup(self)
+        
+        self.preview_off_action = QAction("Off", self)
+        self.preview_off_action.setCheckable(True)
+        self.preview_off_action.triggered.connect(lambda: self._set_preview_pane_position("off"))
+        self.preview_pane_group.addAction(self.preview_off_action)
+        preview_pane_menu.addAction(self.preview_off_action)
+        
+        self.preview_right_action = QAction("Right", self)
+        self.preview_right_action.setCheckable(True)
+        self.preview_right_action.triggered.connect(lambda: self._set_preview_pane_position("right"))
+        self.preview_pane_group.addAction(self.preview_right_action)
+        preview_pane_menu.addAction(self.preview_right_action)
+        
+        self.preview_bottom_action = QAction("Bottom", self)
+        self.preview_bottom_action.setCheckable(True)
+        self.preview_bottom_action.triggered.connect(lambda: self._set_preview_pane_position("bottom"))
+        self.preview_pane_group.addAction(self.preview_bottom_action)
+        preview_pane_menu.addAction(self.preview_bottom_action)
         
         view_menu.addSeparator()
         
