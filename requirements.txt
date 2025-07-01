@@ -1,0 +1,49 @@
+# Core GUI Framework
+PyQt6>=6.6.0
+PyQt6-WebEngine>=6.6.0
+
+# Email and Network
+# Note: imaplib, poplib, smtplib, email are built-in to Python
+
+# Data Validation and ORM
+pydantic>=2.5.0
+sqlalchemy>=2.0.0
+alembic>=1.13.0
+
+# Configuration and Security
+keyring>=24.3.0
+cryptography>=41.0.0
+toml>=0.10.2
+
+# Text Processing and HTML
+beautifulsoup4>=4.12.0
+markdown>=3.5.0
+html2text>=2020.1.16
+
+# Image and Media Processing
+Pillow>=10.1.0
+
+# Utilities
+python-dateutil>=2.8.2
+chardet>=5.2.0
+aiofiles>=23.2.0
+
+# Rich Text and Document Processing
+python-docx>=1.1.0  # For potential .docx attachment preview
+odfpy>=1.4.1       # For ODF document support
+
+# Calendar and Contact Integration
+icalendar>=5.0.0
+vobject>=0.9.6
+caldav>=1.3.0
+requests>=2.31.0
+
+# CardDAV support (for contact synchronization)
+carddav-lib>=0.1.0  # Alternative: use requests for custom CardDAV implementation
+
+# Additional date/time handling
+pytz>=2023.3
+dateutil>=2.8.2
+
+# Optional: For future encryption support
+python-gnupg>=0.5.0 

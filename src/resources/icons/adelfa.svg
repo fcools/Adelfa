@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="58" fill="#2563eb" stroke="#1e40af" stroke-width="4"/>
+  
+  <!-- Email envelope -->
+  <rect x="24" y="40" width="80" height="56" rx="4" fill="#ffffff" stroke="none"/>
+  <path d="M 24 44 L 64 72 L 104 44" stroke="#2563eb" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Small highlight -->
+  <circle cx="48" cy="28" r="8" fill="#60a5fa" opacity="0.7"/>
+</svg> 

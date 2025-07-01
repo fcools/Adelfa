@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# AppRun script for Adelfa Email Client AppImage
+# This script sets up the environment and launches the application
+
+HERE="$(dirname "$(readlink -f "${0}")")"
+
+# Set up environment
+export APPDIR="${HERE}"
+export PATH="${HERE}/usr/bin:${PATH}"
+export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+export PYTHONPATH="${HERE}/usr/lib/python3.12/site-packages:${HERE}/usr/src:${PYTHONPATH}"
+
+# Set Qt platform plugin path
+export QT_PLUGIN_PATH="${HERE}/usr/lib/x86_64-linux-gnu/qt6/plugins:${QT_PLUGIN_PATH}"
+export QML2_IMPORT_PATH="${HERE}/usr/lib/x86_64-linux-gnu/qt6/qml:${QML2_IMPORT_PATH}"
+
+# Set locale and internationalization environment
+export LOCPATH="${HERE}/usr/share/locale:${LOCPATH}"
+export LANGUAGE="${LANGUAGE:-}"
+export LC_ALL="${LC_ALL:-}"
+export LANG="${LANG:-en_US.UTF-8}"
+
+# Set application-specific environment
+export ADELFA_APPIMAGE=1
+export ADELFA_PORTABLE=1
+
+# Change to a writable directory to avoid permission issues
+cd "${HOME}" 2>/dev/null || cd /tmp
+
+# Launch the application
+exec "${HERE}/usr/bin/python3" "${HERE}/usr/src/main.py" "$@" 

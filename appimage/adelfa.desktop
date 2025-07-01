@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Adelfa PIM Suite
+Comment=A complete Personal Information Management suite for Linux with Outlook 365 familiarity
+Exec=adelfa
+Icon=adelfa
+Terminal=false
+Categories=Office;Email;Calendar;ContactManagement;
+MimeType=x-scheme-handler/mailto;message/rfc822;application/mbox;text/calendar;text/x-vcard;
+Keywords=email;mail;outlook;client;calendar;contacts;tasks;notes;pim;imap;pop3;smtp;caldav;carddav;
+StartupNotify=true
+StartupWMClass=adelfa 
