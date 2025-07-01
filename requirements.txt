@@ -1,17 +1,17 @@
 # Core GUI Framework
-PyQt6>=6.6.0
+PyQt6>=6.4.0
 PyQt6-WebEngine>=6.6.0
 
 # Email and Network
 # Note: imaplib, poplib, smtplib, email are built-in to Python
 
 # Data Validation and ORM
-pydantic>=2.5.0
+pydantic>=2.0.0
 sqlalchemy>=2.0.0
 alembic>=1.13.0
 
 # Configuration and Security
-keyring>=24.3.0
+keyring>=24.0.0
 cryptography>=41.0.0
 toml>=0.10.2
 
@@ -38,31 +38,26 @@ vobject>=0.9.6
 caldav>=1.3.0
 requests>=2.31.0
 
-# CardDAV support (for contact synchronization)
-carddav-lib>=0.1.0  # Alternative: use requests for custom CardDAV implementation
-
 # Additional date/time handling
 pytz>=2023.3
-dateutil>=2.8.2
 
 # Optional: For future encryption support
 python-gnupg>=0.5.0
 
 # Communication & Collaboration Integration
-websockets>=11.0.3          # For real-time communication
-matrix-nio>=0.21.0          # Matrix protocol client
-aiohttp>=3.8.5             # Async HTTP for API calls
-janus>=1.0.0               # Sync/async queue bridge
+websockets>=11.0.0
+matrix-nio>=0.20.0
+aiohttp>=3.8.0
+pyqt6-webengine>=6.4.0
 
-# Video/Audio Integration
-pyqt6-webengine>=6.5.0     # For embedding Jitsi Meet interface
-pydub>=0.25.1              # Audio processing
-opencv-python>=4.8.0       # Video processing (optional)
-
-# VoIP Integration (optional)
-pjsua2                     # SIP protocol support
-pyaudio>=0.2.11            # Audio I/O
+# Video/Audio Integration (optional - may require system dependencies)
+# pydub>=0.25.0
+# opencv-python>=4.8.0
+# pyaudio>=0.2.11
 
 # Cloud Storage Integration
-webdavclient3>=3.14.6      # WebDAV protocol support
-paramiko>=3.3.1            # SSH/SFTP support 
+webdavclient3>=3.14.6
+paramiko>=3.3.0
+
+# DNS resolution for email autoconfig
+dnspython>=2.4.0 

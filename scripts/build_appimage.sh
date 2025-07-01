@@ -66,27 +66,49 @@ cp "$(which python3.12)" "$APPDIR/usr/bin/python3"
 
 # Copy Python standard library
 echo "📚 Copying Python standard library..."
-PYTHON_LIB_DIR="$(python3.12 -c "import sys; print(sys.path[1])")"
-cp -r "$PYTHON_LIB_DIR" "$APPDIR/usr/lib/python$PYTHON_VERSION/"
+PYTHON_LIB_DIR="/usr/lib/python3.12"
+if [ -d "$PYTHON_LIB_DIR" ]; then
+    cp -r "$PYTHON_LIB_DIR"/* "$APPDIR/usr/lib/python$PYTHON_VERSION/"
+    echo "✅ Copied Python standard library from $PYTHON_LIB_DIR"
+else
+    echo "⚠️ Warning: Python standard library not found at $PYTHON_LIB_DIR"
+fi
 
 # Copy site-packages from virtual environment
 echo "📦 Copying Python packages..."
 cp -r "$PROJECT_ROOT/venv/lib/python$PYTHON_VERSION/site-packages/"* "$APPDIR/usr/lib/python$PYTHON_VERSION/site-packages/"
 
-# Copy system Qt libraries and plugins
-echo "🎨 Copying Qt libraries..."
-QT_LIB_DIR="/usr/lib/x86_64-linux-gnu"
-if [ -d "$QT_LIB_DIR" ]; then
-    mkdir -p "$APPDIR/usr/lib/x86_64-linux-gnu"
+# Copy Qt libraries from PyQt6 (more reliable than system libraries)
+echo "🎨 Copying Qt libraries from PyQt6..."
+PYQT6_QT_DIR="$PROJECT_ROOT/venv/lib/python$PYTHON_VERSION/site-packages/PyQt6/Qt6"
+
+if [ -d "$PYQT6_QT_DIR" ]; then
+    mkdir -p "$APPDIR/usr/lib/Qt6"
     
-    # Copy Qt6 libraries
-    find "$QT_LIB_DIR" -name "libQt6*.so*" -exec cp {} "$APPDIR/usr/lib/x86_64-linux-gnu/" \; 2>/dev/null || true
-    
-    # Copy Qt plugins
-    if [ -d "$QT_LIB_DIR/qt6/plugins" ]; then
-        mkdir -p "$APPDIR/usr/lib/x86_64-linux-gnu/qt6"
-        cp -r "$QT_LIB_DIR/qt6/plugins" "$APPDIR/usr/lib/x86_64-linux-gnu/qt6/"
+    # Copy Qt6 libraries from PyQt6
+    if [ -d "$PYQT6_QT_DIR/lib" ]; then
+        cp -r "$PYQT6_QT_DIR/lib"/* "$APPDIR/usr/lib/Qt6/"
+        echo "  ✅ Copied Qt6 libraries from PyQt6"
     fi
+    
+    # Copy Qt6 plugins from PyQt6
+    if [ -d "$PYQT6_QT_DIR/plugins" ]; then
+        mkdir -p "$APPDIR/usr/lib/Qt6/plugins"
+        cp -r "$PYQT6_QT_DIR/plugins"/* "$APPDIR/usr/lib/Qt6/plugins/"
+        echo "  ✅ Copied Qt6 plugins from PyQt6"
+    fi
+    
+    # Copy Qt6 translations if available
+    if [ -d "$PYQT6_QT_DIR/translations" ]; then
+        mkdir -p "$APPDIR/usr/lib/Qt6/translations"
+        cp -r "$PYQT6_QT_DIR/translations"/* "$APPDIR/usr/lib/Qt6/translations/"
+        echo "  ✅ Copied Qt6 translations"
+    fi
+else
+    echo "  ⚠️ Warning: PyQt6 Qt6 libraries not found, falling back to system libraries"
+    # Fallback to system libraries if PyQt6 libraries are not found
+    mkdir -p "$APPDIR/usr/lib/x86_64-linux-gnu"
+    find /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu -name "libQt6*.so*" -exec cp {} "$APPDIR/usr/lib/x86_64-linux-gnu/" \; 2>/dev/null || true
 fi
 
 # Copy other required system libraries
@@ -95,16 +117,22 @@ LIBS_TO_COPY=(
     "libssl.so.3"
     "libcrypto.so.3"
     "libffi.so.8"
+    "libdbus-1.so.3"
     "libxcb*.so*"
     "libX11.so.6"
     "libXext.so.6"
     "libXrender.so.1"
     "libfontconfig.so.1"
     "libfreetype.so.6"
+    "libglib-2.0.so.0"
+    "libgcc_s.so.1"
+    "libstdc++.so.6"
 )
 
 for lib_pattern in "${LIBS_TO_COPY[@]}"; do
     find /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu -name "$lib_pattern" -exec cp {} "$APPDIR/usr/lib/x86_64-linux-gnu/" \; 2>/dev/null || true
+    # Also copy to lib directory for dependencies
+    find /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu -name "$lib_pattern" -exec cp {} "$APPDIR/lib/x86_64-linux-gnu/" \; 2>/dev/null || true
 done
 
 # Copy AppRun script

@@ -14,6 +14,7 @@ from PyQt6.QtGui import QAction, QIcon, QFont
 
 from ..config.app_config import AppConfig
 from ..utils.logging_setup import get_logger
+from ..core.email.account_manager import AccountManager
 
 
 class NavigationPane(QWidget):
@@ -128,17 +129,23 @@ class AdelfahMainWindow(QMainWindow):
     - Integrated toolbar and menu system
     """
     
-    def __init__(self, config: AppConfig, parent: Optional[QWidget] = None):
+    def __init__(self, config: AppConfig, db_session=None, parent: Optional[QWidget] = None):
         """
         Initialize the main window.
         
         Args:
             config: Application configuration.
+            db_session: Database session for account management.
             parent: Parent widget.
         """
         super().__init__(parent)
         self.config = config
         self.logger = get_logger(__name__)
+        
+        # Initialize account manager if database session is provided
+        self.account_manager = None
+        if db_session:
+            self.account_manager = AccountManager(db_session)
         
         self.setWindowTitle("Adelfa PIM Suite")
         self.setMinimumSize(1000, 700)
@@ -493,9 +500,11 @@ class AdelfahMainWindow(QMainWindow):
         
         # Account management
         add_account_action = QAction("Add Account...", self)
+        add_account_action.triggered.connect(self._on_add_account)
         file_menu.addAction(add_account_action)
         
         account_settings_action = QAction("Account Settings...", self)
+        account_settings_action.triggered.connect(self._on_account_settings)
         file_menu.addAction(account_settings_action)
         
         file_menu.addSeparator()
@@ -687,4 +696,81 @@ class AdelfahMainWindow(QMainWindow):
         self.connection_status = QLabel("Not connected")
         status_bar.addWidget(self.connection_status)
         
-        status_bar.addPermanentWidget(QLabel("Adelfa Email Client v0.1.0-dev")) 
+        status_bar.addPermanentWidget(QLabel("Adelfa Email Client v0.1.0-dev"))
+    
+    def _on_add_account(self) -> None:
+        """Handle Add Account menu action."""
+        if self.account_manager:
+            try:
+                account = self.account_manager.show_account_setup_wizard(self)
+                if account:
+                    self.connection_status.setText(f"Account '{account.name}' added")
+                    self.logger.info(f"Account added: {account.name} ({account.email_address})")
+                    
+                    # Refresh any UI components that show accounts
+                    self._refresh_account_displays()
+            except Exception as e:
+                self.logger.error(f"Failed to add account: {e}")
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.critical(
+                    self,
+                    "Account Setup Error",
+                    f"Failed to set up account: {str(e)}"
+                )
+        else:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self,
+                "Feature Unavailable",
+                "Account management is not available. Database connection required."
+            )
+    
+    def _on_account_settings(self) -> None:
+        """Handle Account Settings menu action."""
+        if self.account_manager:
+            try:
+                # Get all accounts
+                accounts = self.account_manager.get_all_accounts()
+                
+                if not accounts:
+                    from PyQt6.QtWidgets import QMessageBox
+                    reply = QMessageBox.question(
+                        self,
+                        "No Accounts",
+                        "No accounts are configured. Would you like to add one now?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                    )
+                    if reply == QMessageBox.StandardButton.Yes:
+                        self._on_add_account()
+                else:
+                    # TODO: Show account management dialog with list of accounts
+                    # For now, just show a simple message
+                    from PyQt6.QtWidgets import QMessageBox
+                    account_names = [acc.name for acc in accounts]
+                    QMessageBox.information(
+                        self,
+                        "Account Settings",
+                        f"Configured accounts:\n• " + "\n• ".join(account_names) +
+                        "\n\nAccount management dialog coming soon!"
+                    )
+            except Exception as e:
+                self.logger.error(f"Failed to show account settings: {e}")
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.critical(
+                    self,
+                    "Account Settings Error",
+                    f"Failed to load account settings: {str(e)}"
+                )
+        else:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self,
+                "Feature Unavailable",
+                "Account management is not available. Database connection required."
+            )
+    
+    def _refresh_account_displays(self) -> None:
+        """Refresh UI components that display account information."""
+        # TODO: Implement account display refresh
+        # This would update folder trees, account lists, etc.
+        pass 

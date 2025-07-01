@@ -1,0 +1,161 @@
+{
+  "account_setup": {
+    "title": "Account Setup",
+    "welcome": {
+      "title": "Welcome to Adelfa",
+      "subtitle": "Let's set up your email, calendar, and contacts",
+      "description": "Adelfa can manage your email accounts and synchronize calendars and contacts from the same providers. This wizard will guide you through the setup process.",
+      "features": "Features",
+      "feature_email": "Email management with multiple account support",
+      "feature_calendar": "Calendar synchronization via CalDAV",
+      "feature_contacts": "Contact synchronization via CardDAV", 
+      "feature_security": "Secure credential storage with system keyring",
+      "get_started": "Get Started"
+    },
+    "provider_selection": {
+      "title": "Choose Your Provider",
+      "subtitle": "Select your email provider or set up manually",
+      "setup_type": "Setup Type",
+      "automatic_setup": "Automatic Setup",
+      "manual_setup": "Manual Setup",
+      "manual_info": "For manual setup, you will need to configure server settings yourself. This is useful for custom email servers or when automatic detection fails.",
+      "common_providers": "Common Providers",
+      "other_provider": "Other Provider",
+      "enter_email": "Enter your email address",
+      "email_placeholder": "your.email@example.com",
+      "detect_settings": "Detect Settings",
+      "detecting": "Detecting settings...",
+      "detection_success": "Settings detected successfully",
+      "detection_failed": "Could not detect settings automatically. Please set up manually.",
+      "next": "Next",
+      "back": "Back"
+    },
+    "account_details": {
+      "title": "Account Details",
+      "subtitle": "Configure your account settings",
+      "account_name": "Account Name",
+      "account_name_placeholder": "My Email Account",
+      "display_name": "Your Name",
+      "display_name_placeholder": "John Doe",
+      "email_address": "Email Address",
+      "email_address_placeholder": "your.email@example.com",
+      "credentials": "Credentials",
+      "password": "Password",
+      "password_placeholder": "Enter your password",
+      "show_password": "Show password",
+      "hide_password": "Hide password",
+      "save_password": "Save password securely",
+      "save_password_help": "Passwords are stored securely using your system's keyring",
+      "test_connection": "Test Connection",
+      "testing": "Testing connection...",
+      "connection_success": "Connection successful!",
+      "connection_failed": "Connection failed: {error}",
+      "advanced_settings": "Advanced Settings",
+      "default_account_name": "Account",
+      "default_email_account": "Email Account"
+    },
+    "server_settings": {
+      "title": "Server Settings",
+      "subtitle": "Configure email server details",
+      "incoming_mail": "Incoming Mail",
+      "outgoing_mail": "Outgoing Mail",
+      "server": "Server",
+      "port": "Port",
+      "security": "Security",
+      "username": "Username",
+      "password": "Password",
+      "protocol": "Protocol",
+      "security_options": {
+        "none": "None",
+        "starttls": "STARTTLS",
+        "tls_ssl": "TLS/SSL",
+        "auto": "Auto-detect"
+      },
+      "protocol_options": {
+        "imap": "IMAP",
+        "pop3": "POP3"
+      },
+      "auth_required": "Authentication required",
+      "use_same_credentials": "Use same credentials as incoming mail"
+    },
+    "calendar_contacts": {
+      "title": "Calendar & Contacts",
+      "subtitle": "Set up calendar and contact synchronization",
+      "enable_calendar": "Enable calendar synchronization",
+      "enable_contacts": "Enable contact synchronization",
+      "calendar_server": "Calendar Server (CalDAV)",
+      "contacts_server": "Contacts Server (CardDAV)",
+      "server_url": "Server URL",
+      "server_url_placeholder": "https://example.com/caldav/",
+      "username": "Username",
+      "password": "Password",
+      "sync_frequency": "Sync frequency",
+      "sync_options": {
+        "manual": "Manual only",
+        "5min": "Every 5 minutes",
+        "15min": "Every 15 minutes",
+        "30min": "Every 30 minutes",
+        "1hour": "Every hour",
+        "daily": "Daily"
+      },
+      "test_calendar": "Test Calendar Connection",
+      "test_contacts": "Test Contacts Connection",
+      "auto_detect": "Auto-detect from email provider",
+      "detecting": "Detecting...",
+      "detection_success": "Settings detected successfully",
+      "detection_failed": "Could not detect settings"
+    },
+    "summary": {
+      "title": "Setup Summary",
+      "subtitle": "Review your account configuration",
+      "account_info": "Account Information",
+      "email_settings": "Email Settings",
+      "calendar_settings": "Calendar Settings",
+      "contacts_settings": "Contacts Settings",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "not_set": "Not set",
+      "finish": "Finish Setup",
+      "cancel": "Cancel",
+      "edit": "Edit"
+    },
+    "errors": {
+      "invalid_email": "Please enter a valid email address",
+      "empty_field": "This field is required",
+      "empty_credentials": "Please enter both username and password",
+      "no_server_settings": "No server settings available. Please configure manually.",
+      "no_imap_settings": "No IMAP settings found for testing.",
+      "invalid_port": "Port must be a number between 1 and 65535",
+      "invalid_url": "Please enter a valid URL",
+      "connection_timeout": "Connection timed out",
+      "authentication_failed": "Authentication failed. Please check your credentials.",
+      "server_not_found": "Server not found. Please check the server address.",
+      "ssl_error": "SSL/TLS connection error",
+      "unknown_error": "An unknown error occurred: {error}"
+    },
+    "help": {
+      "title": "Help",
+      "general": "This wizard will help you set up your email account with calendar and contacts synchronization. Follow the steps and provide the required information for each page."
+    },
+    "buttons": {
+      "next": "Next",
+      "back": "Back", 
+      "finish": "Finish",
+      "cancel": "Cancel",
+      "test": "Test",
+      "detect": "Auto-detect",
+      "retry": "Retry",
+      "skip": "Skip"
+    },
+    "tooltips": {
+      "account_name": "A friendly name to identify this account in the application",
+      "display_name": "Your name as it appears in outgoing emails",
+      "imap": "IMAP allows you to access your email from multiple devices and keeps them synchronized",
+      "pop3": "POP3 downloads emails to this device only",
+      "starttls": "Upgrade connection to encrypted after initial connection",
+      "tls_ssl": "Use encrypted connection from the start",
+      "caldav": "CalDAV is the standard protocol for calendar synchronization",
+      "carddav": "CardDAV is the standard protocol for contact synchronization"
+    }
+  }
+} 

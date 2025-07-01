@@ -226,5 +226,108 @@ class LocaleManager:
         ]
 
 
+class JSONTranslator:
+    """
+    Simple JSON-based translator for loading localized strings.
+    """
+    
+    def __init__(self, locale: str = "en", translations_dir: Optional[Path] = None):
+        """
+        Initialize the JSON translator.
+        
+        Args:
+            locale: Locale code (e.g., 'en', 'es').
+            translations_dir: Directory containing JSON translation files.
+        """
+        self.logger = get_logger(__name__)
+        self.locale = locale.split('_')[0]  # Extract language code
+        self.translations = {}
+        
+        if translations_dir is None:
+            app_dir = Path(__file__).parent.parent.parent
+            translations_dir = app_dir / "resources" / "translations"
+        
+        self.translations_dir = translations_dir
+        self._load_translations()
+    
+    def _load_translations(self):
+        """Load translations from JSON files."""
+        try:
+            import json
+            
+            # Try to load language-specific translation file
+            translation_file = self.translations_dir / f"account_setup_{self.locale}.json"
+            
+            if translation_file.exists():
+                with open(translation_file, 'r', encoding='utf-8') as f:
+                    self.translations = json.load(f)
+                self.logger.info(f"Loaded translations from: {translation_file}")
+            else:
+                # Fallback to English
+                fallback_file = self.translations_dir / "account_setup_en.json"
+                if fallback_file.exists():
+                    with open(fallback_file, 'r', encoding='utf-8') as f:
+                        self.translations = json.load(f)
+                    self.logger.info(f"Loaded fallback translations from: {fallback_file}")
+                else:
+                    self.logger.warning("No translation files found")
+                    
+        except Exception as e:
+            self.logger.error(f"Failed to load translations: {e}")
+    
+    def __call__(self, key: str, *args, **kwargs) -> str:
+        """
+        Get translated string for the given key.
+        
+        Args:
+            key: Translation key (can use dot notation for nested keys).
+            *args, **kwargs: Format arguments for string formatting.
+            
+        Returns:
+            str: Translated string or the key itself if not found.
+        """
+        try:
+            # Support dot notation for nested keys (e.g., "wizard.welcome.title")
+            keys = key.split('.')
+            value = self.translations
+            
+            for k in keys:
+                if isinstance(value, dict) and k in value:
+                    value = value[k]
+                else:
+                    # Key not found, return the original key
+                    self.logger.debug(f"Translation key not found: {key}")
+                    return key
+            
+            # If we have a string, format it with any provided arguments
+            if isinstance(value, str):
+                if args or kwargs:
+                    return value.format(*args, **kwargs)
+                return value
+            else:
+                # Value is not a string, return the key
+                return key
+                
+        except Exception as e:
+            self.logger.warning(f"Error getting translation for key '{key}': {e}")
+            return key
+
+
+def get_translator(locale: Optional[str] = None) -> JSONTranslator:
+    """
+    Get a JSON translator instance.
+    
+    Args:
+        locale: Locale to use (if None, uses current locale from locale_manager).
+        
+    Returns:
+        JSONTranslator: Translator instance.
+    """
+    if locale is None:
+        locale = locale_manager.get_current_locale()
+    
+    return JSONTranslator(locale)
+
+
 # Global locale manager instance
 locale_manager = LocaleManager() 
