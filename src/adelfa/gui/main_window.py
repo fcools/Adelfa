@@ -15,6 +15,12 @@ from PyQt6.QtGui import QAction, QIcon, QFont
 from ..config.app_config import AppConfig
 from ..utils.logging_setup import get_logger
 from ..core.email.account_manager import AccountManager
+from ..core.email.email_manager import EmailManager
+from ..core.email.credential_manager import CredentialManager
+from ..data.repositories.account_repository import AccountRepository
+from .email.email_view import EmailView
+from .email.email_composer import EmailComposer
+from .email.account_manager_dialog import AccountManagerDialog
 
 
 class NavigationPane(QWidget):
@@ -142,12 +148,13 @@ class AdelfahMainWindow(QMainWindow):
         self.config = config
         self.logger = get_logger(__name__)
         
-        # Initialize account manager if database session is provided
-        self.account_manager = None
-        if db_session:
-            self.account_manager = AccountManager(db_session)
+        # Initialize core components
+        self.credential_manager = CredentialManager()
+        self.account_repository = AccountRepository(db_session)
+        self.account_manager = AccountManager(db_session)
+        self.email_manager = EmailManager(self.credential_manager, db_session)
         
-        self.setWindowTitle("Adelfa PIM Suite")
+        self.setWindowTitle("Adelfa Personal Information Manager")
         self.setMinimumSize(1000, 700)
         
         # Apply configuration
@@ -159,12 +166,25 @@ class AdelfahMainWindow(QMainWindow):
         self._setup_toolbars()
         self._setup_status_bar()
         
+        # Load accounts and setup email
+        self._load_accounts()
+        self._setup_email_accounts()
+        
+        # Ensure initial module state is synchronized
+        self._synchronize_initial_state()
+        
         self.logger.info("Main window initialized")
+    
+    def _synchronize_initial_state(self) -> None:
+        """Synchronize the initial navigation state."""
+        # Trigger the module change to ensure everything is synchronized
+        initial_module = self.navigation_pane.current_module
+        self._on_module_changed(initial_module)
     
     def _apply_config(self) -> None:
         """Apply configuration settings to the window."""
-        # Set window size
-        self.resize(self.config.ui.window_width, self.config.ui.window_height)
+        # Note: Window size is handled by showMaximized() in main.py
+        # If not maximized, the window will use the default minimumSize of 1000x700
         
         # Set default font
         font = QFont(self.config.ui.font_family, self.config.ui.font_size)
@@ -202,36 +222,13 @@ class AdelfahMainWindow(QMainWindow):
     
     def _create_email_view(self) -> None:
         """Create the email module view."""
-        email_widget = QWidget()
-        layout = QHBoxLayout(email_widget)
-        layout.setContentsMargins(0, 0, 0, 0)
+        # Import EmailView here to avoid circular imports
+        from .email.email_view import EmailView
         
-        # Create 3-pane email layout
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        layout.addWidget(splitter)
-        
-        # Left pane: Folder tree
-        self.folder_tree = self._create_folder_tree()
-        splitter.addWidget(self.folder_tree)
-        
-        # Right splitter for message list and preview
-        right_splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(right_splitter)
-        
-        # Center pane: Message list
-        self.message_list = self._create_message_list()
-        right_splitter.addWidget(self.message_list)
-        
-        # Right pane: Message preview (if enabled)
-        if self.config.ui.show_preview_pane:
-            self.message_preview = self._create_message_preview()
-            right_splitter.addWidget(self.message_preview)
-            right_splitter.setSizes([400, 300])
-        
-        # Set initial splitter sizes
-        splitter.setSizes([200, 800])
-        
-        self.module_stack.addWidget(email_widget)
+        self.email_widget = EmailView(self.email_manager)
+        # Connect email view status messages to main window status bar
+        self.email_widget.status_message.connect(self.statusBar().showMessage)
+        self.module_stack.addWidget(self.email_widget)
     
     def _create_calendar_view(self) -> None:
         """Create the calendar module view."""
@@ -360,7 +357,7 @@ class AdelfahMainWindow(QMainWindow):
             "notes": "Notes",
         }
         module_name = module_names.get(module_id, "Email")
-        self.setWindowTitle(f"Adelfa PIM Suite - {module_name}")
+        self.setWindowTitle(f"Adelfa Personal Information Manager - {module_name}")
     
     def _create_folder_tree(self) -> QTreeWidget:
         """
@@ -406,13 +403,7 @@ class AdelfahMainWindow(QMainWindow):
             QListWidget: Configured message list.
         """
         list_widget = QListWidget()
-        
-        # Add some placeholder messages for demonstration
-        for i in range(5):
-            item = QListWidgetItem(f"📧 Sample Email {i + 1}")
-            item.setData(Qt.ItemDataRole.UserRole, f"email_{i + 1}")
-            list_widget.addItem(item)
-        
+        list_widget.setPlaceholderText("Select a folder to view messages")
         return list_widget
     
     def _create_message_preview(self) -> QTextEdit:
@@ -425,23 +416,6 @@ class AdelfahMainWindow(QMainWindow):
         preview = QTextEdit()
         preview.setReadOnly(True)
         preview.setPlaceholderText("Select a message to preview...")
-        
-        # Set some sample content
-        preview.setHtml("""
-        <h3>Welcome to Adelfa Email Client!</h3>
-        <p>This is the message preview pane. When you select an email from the message list, 
-        its content will be displayed here.</p>
-        <p><strong>Key Features:</strong></p>
-        <ul>
-            <li>Outlook 365-style interface</li>
-            <li>Point-size font selection</li>
-            <li>Rich text editing</li>
-            <li>Conversation threading</li>
-            <li>Cross-platform compatibility</li>
-        </ul>
-        <p><em>Start by setting up your email account in the File menu.</em></p>
-        """)
-        
         return preview
     
     def _setup_menus(self) -> None:
@@ -502,6 +476,10 @@ class AdelfahMainWindow(QMainWindow):
         add_account_action = QAction("Add Account...", self)
         add_account_action.triggered.connect(self._on_add_account)
         file_menu.addAction(add_account_action)
+        
+        account_manager_action = QAction("Account Manager...", self)
+        account_manager_action.triggered.connect(self._on_account_manager)
+        file_menu.addAction(account_manager_action)
         
         account_settings_action = QAction("Account Settings...", self)
         account_settings_action.triggered.connect(self._on_account_settings)
@@ -696,7 +674,7 @@ class AdelfahMainWindow(QMainWindow):
         self.connection_status = QLabel("Not connected")
         status_bar.addWidget(self.connection_status)
         
-        status_bar.addPermanentWidget(QLabel("Adelfa Email Client v0.1.0-dev"))
+        status_bar.addPermanentWidget(QLabel("Adelfa Personal Information Manager v0.1.0-dev"))
     
     def _on_add_account(self) -> None:
         """Handle Add Account menu action."""
@@ -725,41 +703,20 @@ class AdelfahMainWindow(QMainWindow):
                 "Account management is not available. Database connection required."
             )
     
-    def _on_account_settings(self) -> None:
-        """Handle Account Settings menu action."""
+    def _on_account_manager(self) -> None:
+        """Handle Account Manager menu action."""
         if self.account_manager:
             try:
-                # Get all accounts
-                accounts = self.account_manager.get_all_accounts()
-                
-                if not accounts:
-                    from PyQt6.QtWidgets import QMessageBox
-                    reply = QMessageBox.question(
-                        self,
-                        "No Accounts",
-                        "No accounts are configured. Would you like to add one now?",
-                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                    )
-                    if reply == QMessageBox.StandardButton.Yes:
-                        self._on_add_account()
-                else:
-                    # TODO: Show account management dialog with list of accounts
-                    # For now, just show a simple message
-                    from PyQt6.QtWidgets import QMessageBox
-                    account_names = [acc.name for acc in accounts]
-                    QMessageBox.information(
-                        self,
-                        "Account Settings",
-                        f"Configured accounts:\n• " + "\n• ".join(account_names) +
-                        "\n\nAccount management dialog coming soon!"
-                    )
+                dialog = AccountManagerDialog(self.account_manager, self)
+                dialog.accounts_changed.connect(self._on_accounts_changed)
+                dialog.exec()
             except Exception as e:
-                self.logger.error(f"Failed to show account settings: {e}")
+                self.logger.error(f"Failed to show account manager: {e}")
                 from PyQt6.QtWidgets import QMessageBox
                 QMessageBox.critical(
                     self,
-                    "Account Settings Error",
-                    f"Failed to load account settings: {str(e)}"
+                    "Account Manager Error",
+                    f"Failed to open account manager: {str(e)}"
                 )
         else:
             from PyQt6.QtWidgets import QMessageBox
@@ -769,8 +726,152 @@ class AdelfahMainWindow(QMainWindow):
                 "Account management is not available. Database connection required."
             )
     
+    def _on_account_settings(self) -> None:
+        """Handle Account Settings menu action (legacy - redirects to Account Manager)."""
+        self._on_account_manager()
+    
+    def _on_accounts_changed(self) -> None:
+        """Handle when accounts have been modified in the Account Manager."""
+        try:
+            # Reload accounts
+            self._load_accounts()
+            
+            # Re-setup email accounts
+            self._setup_email_accounts()
+            
+            # Refresh account displays
+            self._refresh_account_displays()
+            
+            self.logger.info("Account changes applied successfully")
+            self.statusBar().showMessage("Account settings updated", 3000)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to apply account changes: {e}")
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self,
+                "Update Error",
+                f"Failed to apply account changes: {str(e)}"
+            )
+    
     def _refresh_account_displays(self) -> None:
-        """Refresh UI components that display account information."""
-        # TODO: Implement account display refresh
-        # This would update folder trees, account lists, etc.
+        """Refresh account displays in the UI."""
+        # This method can be extended later to update UI elements
+        # that display account information
         pass 
+
+    def _load_accounts(self):
+        """Load saved email accounts."""
+        try:
+            accounts = self.account_manager.get_all_accounts()
+            if accounts:
+                self.logger.info(f"Loaded {len(accounts)} email accounts")
+            else:
+                self.logger.info("No email accounts configured")
+        except Exception as e:
+            self.logger.error(f"Failed to load accounts: {e}")
+    
+    def _setup_email_accounts(self):
+        """Setup email accounts in the email manager."""
+        try:
+            accounts = self.account_manager.get_all_accounts()
+            
+            # Add accounts to email manager (this is quick, no network operations)
+            for account in accounts:
+                self.email_manager.add_account(account)
+            
+            # Load accounts in email view with cached data immediately
+            if accounts and hasattr(self, 'email_widget'):
+                # Load accounts in the background (this will handle connections asynchronously)
+                self._setup_email_accounts_async(accounts, self.email_widget)
+            
+            self.logger.info("Email accounts setup completed")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to setup email accounts: {e}")
+            self.statusBar().showMessage(f"Email setup failed: {e}")
+    
+    def _setup_email_accounts_async(self, accounts, email_widget):
+        """Setup email account connections asynchronously."""
+        from PyQt6.QtCore import QThread, QObject, pyqtSignal
+        
+        class EmailSetupWorker(QObject):
+            finished = pyqtSignal()
+            error = pyqtSignal(str)
+            
+            def __init__(self, email_manager, accounts):
+                super().__init__()
+                self.email_manager = email_manager
+                self.accounts = accounts
+            
+            def run(self):
+                try:
+                    # Connect to accounts in background
+                    self.email_manager.connect_all_accounts()
+                    self.finished.emit()
+                except Exception as e:
+                    self.error.emit(str(e))
+        
+        # Create worker thread
+        self.email_setup_thread = QThread()
+        self.email_setup_worker = EmailSetupWorker(self.email_manager, accounts)
+        self.email_setup_worker.moveToThread(self.email_setup_thread)
+        
+        # Connect signals
+        self.email_setup_thread.started.connect(self.email_setup_worker.run)
+        self.email_setup_worker.finished.connect(self._on_email_setup_finished)
+        self.email_setup_worker.finished.connect(self.email_setup_thread.quit)
+        self.email_setup_worker.error.connect(self._on_email_setup_error)
+        self.email_setup_worker.error.connect(self.email_setup_thread.quit)
+        
+        # Start background setup
+        self.connection_status.setText("Connecting...")
+        self.statusBar().showMessage("Connecting to email accounts...")
+        self.email_setup_thread.start()
+        
+        # Load accounts in EmailView (this should be quick without network operations)
+        email_widget.load_accounts(accounts)
+    
+    def _on_email_setup_finished(self):
+        """Called when email account setup completes."""
+        self.statusBar().showMessage("Email accounts connected successfully", 3000)
+        self.connection_status.setText("Connected")
+        if hasattr(self, 'email_widget'):
+            # Refresh the email view now that connections are established
+            # (accounts were already loaded in _setup_email_accounts_async)
+            self.email_widget.refresh_folders_and_messages()
+    
+    def _on_email_setup_error(self, error_msg):
+        """Called when email account setup fails."""
+        self.logger.error(f"Email setup error: {error_msg}")
+        self.connection_status.setText("Connection failed")
+        self.statusBar().showMessage(f"Email setup failed: {error_msg}", 5000)
+
+    def compose_new_email(self):
+        """Create a new email."""
+        accounts = self.account_manager.get_all_accounts()
+        if not accounts:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(
+                self, 
+                "No Accounts", 
+                "Please set up an email account first."
+            )
+            return
+        
+        composer = EmailComposer(self.email_manager, accounts, parent=self)
+        composer.email_sent.connect(self.on_email_sent)
+        composer.exec()
+    
+    def refresh_email(self):
+        """Refresh email folders."""
+        if hasattr(self, 'email_widget') and hasattr(self.email_widget, 'refresh_current_folder'):
+            self.email_widget.refresh_current_folder()
+        self.statusBar().showMessage("Refreshing email...", 2000)
+    
+    def on_email_sent(self, success: bool):
+        """Handle email sent notification."""
+        if success:
+            self.statusBar().showMessage("Email sent successfully!", 3000)
+        else:
+            self.statusBar().showMessage("Failed to send email", 3000) 

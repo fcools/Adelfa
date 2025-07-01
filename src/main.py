@@ -133,7 +133,7 @@ def main() -> int:
         # Set up logging
         setup_logging()
         logger = get_logger(__name__)
-        logger.info("Starting Adelfa PIM Suite...")
+        logger.info("Starting Adelfa Personal Information Manager...")
         
         # Initialize application configuration
         config = AppConfig()
@@ -159,6 +159,12 @@ def main() -> int:
         # Create and show main window
         main_window = AdelfahMainWindow(config, session)
         main_window.show()
+        
+        # Maximize window after it's shown and event loop has started
+        from PyQt6.QtCore import QTimer, Qt
+        def maximize_window():
+            main_window.setWindowState(Qt.WindowState.WindowMaximized)
+        QTimer.singleShot(100, maximize_window)
         
         logger.info("Application started successfully")
         

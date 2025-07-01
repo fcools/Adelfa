@@ -68,7 +68,7 @@ def setup_logging(
     logger.addHandler(file_handler)
     
     # Log startup message
-    logger.info("Adelfa Email Client - Logging initialized")
+    logger.info("Adelfa Personal Information Manager - Logging initialized")
     logger.info(f"Log level: {log_level}")
     logger.info(f"Log file: {log_file}")
 

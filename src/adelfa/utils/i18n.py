@@ -330,4 +330,38 @@ def get_translator(locale: Optional[str] = None) -> JSONTranslator:
 
 
 # Global locale manager instance
-locale_manager = LocaleManager() 
+locale_manager = LocaleManager()
+
+
+# Simple translation function for easy import
+def _(text: str) -> str:
+    """
+    Simple translation function that returns the text as-is for now.
+    
+    This is a placeholder implementation that returns the original text.
+    In the future, this could be enhanced to use proper translation files.
+    
+    Args:
+        text: Text to translate
+        
+    Returns:
+        str: Translated text (currently just returns the input)
+    """
+    return text
+
+
+# Alternative function that uses the JSON translator
+def translate(key: str, locale: Optional[str] = None, *args, **kwargs) -> str:
+    """
+    Translate a key using the JSON translator.
+    
+    Args:
+        key: Translation key
+        locale: Locale to use (optional)
+        *args, **kwargs: Format arguments
+        
+    Returns:
+        str: Translated text
+    """
+    translator = get_translator(locale)
+    return translator(key, *args, **kwargs) 

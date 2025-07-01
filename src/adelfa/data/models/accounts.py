@@ -178,6 +178,8 @@ class Account(Base):
     
     # Relationships
     provider = relationship("AccountProvider")
+    cached_folders = relationship("CachedFolder", back_populates="account", cascade="all, delete-orphan")
+    cached_messages = relationship("CachedMessage", back_populates="account", cascade="all, delete-orphan")
     
     # Indexes for performance
     __table_args__ = (
