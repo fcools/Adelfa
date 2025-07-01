@@ -193,6 +193,13 @@ src/adelfa/
 - [ ] Cross-module integration (calendar invites, contact emails)
 - [ ] Outlook data import capabilities
 
+### Phase 4 Goals (6-9 months) - Collaboration Features
+- [ ] Jitsi Meet video conferencing integration
+- [ ] Matrix/Element chat integration
+- [ ] Contact-based video calling
+- [ ] Calendar meeting links with video conferences
+- [ ] Cloud storage integration (Nextcloud, WebDAV)
+
 ## 📝 Development Notes
 
 ### Design Principles
@@ -214,5 +221,29 @@ src/adelfa/
 - ✅ **M1: Foundation** - Architecture, models, and basic UI (Completed)
 - 🔄 **M2: Core PIM** - Working calendar, contacts, tasks, notes modules
 - 📅 **M3: Integration** - Server sync and cross-module features  
-- 🎯 **M4: Compatibility** - Outlook import and Exchange support
-- 🚀 **M5: Polish** - Performance, security, and advanced features 
+- 🎯 **M4: Collaboration** - Video conferencing, chat, and communication
+- 🔗 **M5: Compatibility** - Outlook import and Exchange support
+- 🚀 **M6: Polish** - Performance, security, and advanced features
+
+## 🔍 Discovered During Work - Collaboration Features
+
+### 🎥 Video Conferencing Integration (January 2025)
+- **Jitsi Meet Integration**: Complete open-source video conferencing
+  - [x] Research Jitsi Meet API and embedding capabilities
+  - [x] Design integration architecture with PyQt6 WebEngine
+  - [x] Create conceptual implementation for meeting management
+  - [ ] Implement calendar event integration with video links
+  - [ ] Add contact-based video calling interface
+  - [ ] Create meeting invitation email templates
+
+### 💬 Communication Features  
+- **Matrix/Element Chat**: Secure, decentralized messaging
+  - [ ] Integrate Matrix protocol for real-time chat
+  - [ ] Add presence indicators for contacts
+  - [ ] Implement group chat for project collaboration
+  
+### ☁️ Cloud Integration
+- **Nextcloud/WebDAV**: File synchronization and sharing
+  - [ ] WebDAV protocol support for file attachments
+  - [ ] Nextcloud-specific integration for calendar/contacts
+  - [ ] Collaborative document editing capabilities 

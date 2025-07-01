@@ -133,12 +133,32 @@ adelfa/
 5. **Signature Management**: Rich HTML signatures
 6. **Rules/Filters**: Email filtering and organization
 
-### Phase 5 - Advanced Features
-1. **Encryption**: PGP/GPG support for email
+### Phase 5 - Collaboration & Communication
+1. **Jitsi Meet Integration**: 
+   - Video calling from contacts
+   - Meeting creation with calendar integration
+   - Screen sharing and recording
+   - Embedded meeting interface
+2. **Matrix/Element Chat**:
+   - Real-time messaging with contacts
+   - Group chat rooms for projects
+   - File sharing through chat
+   - Message history and search
+3. **VoIP Integration**:
+   - SIP-based calling through contacts
+   - Call history and logs
+   - Contact presence indicators
+4. **Cloud Storage Integration**:
+   - Nextcloud file synchronization
+   - WebDAV support for attachments
+   - Collaborative document editing
+
+### Phase 6 - Advanced Features
+1. **Encryption**: PGP/GPG support for email and chat
 2. **Plugins**: Extension system for additional features
 3. **Mobile Sync**: Synchronization with mobile devices
 4. **Advanced Search**: Cross-module search and indexing
-5. **Reporting**: Usage analytics and data insights
+5. **AI Assistance**: Smart scheduling and email organization
 
 ## 📦 Distribution Strategy
 
@@ -181,3 +201,22 @@ adelfa/
 - **Performance**: Email sync speed, UI responsiveness
 - **Compatibility**: Successful import from Outlook/Thunderbird
 - **Usability**: User testing with Windows migrants to Linux 
+
+## 🤝 Collaboration & Communication Integration
+
+### Video Conferencing & Communication
+- **Jitsi Meet**: Primary video conferencing solution
+- **Matrix/Element**: Secure real-time messaging and group chat
+- **BigBlueButton**: Webinar and educational meeting features
+- **SIP Integration**: Traditional telephony support
+
+### Cloud & File Sharing
+- **Nextcloud**: Self-hosted cloud storage and collaboration
+- **WebDAV**: Generic file sharing protocol support
+- **SFTP/SSH**: Secure file transfer capabilities
+
+### Unified Communications
+- **VoIP Integration**: SIP-based calling through contacts
+- **Presence Indicators**: Show online/offline status
+- **Screen Sharing**: Built-in screen sharing capabilities
+- **Chat History**: Persistent messaging with contacts 

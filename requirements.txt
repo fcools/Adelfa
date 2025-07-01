@@ -46,4 +46,23 @@ pytz>=2023.3
 dateutil>=2.8.2
 
 # Optional: For future encryption support
-python-gnupg>=0.5.0 
+python-gnupg>=0.5.0
+
+# Communication & Collaboration Integration
+websockets>=11.0.3          # For real-time communication
+matrix-nio>=0.21.0          # Matrix protocol client
+aiohttp>=3.8.5             # Async HTTP for API calls
+janus>=1.0.0               # Sync/async queue bridge
+
+# Video/Audio Integration
+pyqt6-webengine>=6.5.0     # For embedding Jitsi Meet interface
+pydub>=0.25.1              # Audio processing
+opencv-python>=4.8.0       # Video processing (optional)
+
+# VoIP Integration (optional)
+pjsua2                     # SIP protocol support
+pyaudio>=0.2.11            # Audio I/O
+
+# Cloud Storage Integration
+webdavclient3>=3.14.6      # WebDAV protocol support
+paramiko>=3.3.1            # SSH/SFTP support 
