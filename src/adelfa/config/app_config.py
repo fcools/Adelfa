@@ -20,6 +20,7 @@ class UIConfig(BaseModel):
     window_height: int = Field(default=800, description="Default window height")
     show_preview_pane: bool = Field(default=True, description="Show email preview pane")
     conversation_view: bool = Field(default=True, description="Enable conversation threading")
+    email_column_widths: Dict[int, int] = Field(default_factory=lambda: {0: 25, 1: 25, 2: 20, 3: 150, 5: 120, 6: 80}, description="Email list column widths")
 
 
 class EmailConfig(BaseModel):

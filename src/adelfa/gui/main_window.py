@@ -226,6 +226,8 @@ class AdelfahMainWindow(QMainWindow):
         from .email.email_view import EmailView
         
         self.email_widget = EmailView(self.email_manager)
+        # Set config for column width persistence
+        self.email_widget.set_config(self.config)
         # Connect email view status messages to main window status bar
         self.email_widget.status_message.connect(self.statusBar().showMessage)
         self.module_stack.addWidget(self.email_widget)

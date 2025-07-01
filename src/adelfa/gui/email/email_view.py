@@ -17,6 +17,7 @@ from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
 import html
 import re
+import locale
 
 from ...core.email.email_manager import EmailManager, EmailManagerError
 from ...core.email.imap_client import EmailMessage, FolderInfo
@@ -57,17 +58,47 @@ class ConversationThread:
         return max(self.messages, key=lambda m: m.headers.date)
     
     def get_participants(self) -> List[str]:
-        """Get all unique participants in the conversation."""
+        """Get all unique participants in the conversation (display names only)."""
         participants = set()
         for message in self.messages:
-            participants.add(message.headers.from_addr)
+            # Extract display name from from_addr
+            from_name = self._extract_display_name(message.headers.from_addr)
+            participants.add(from_name)
+            
             if hasattr(message.headers, 'to_addrs') and message.headers.to_addrs:
                 for addr in message.headers.to_addrs:
-                    participants.add(addr.strip())
+                    to_name = self._extract_display_name(addr.strip())
+                    participants.add(to_name)
             elif hasattr(message.headers, 'to') and message.headers.to:
                 for addr in message.headers.to.split(','):
-                    participants.add(addr.strip())
+                    to_name = self._extract_display_name(addr.strip())
+                    participants.add(to_name)
         return list(participants)
+    
+    def _extract_display_name(self, email_addr: str) -> str:
+        """
+        Extract display name from email address.
+        
+        Examples:
+        - "John Doe <john@example.com>" → "John Doe"
+        - "john@example.com" → "john@example.com"
+        - "John Doe" → "John Doe"
+        """
+        if not email_addr:
+            return ""
+        
+        # Pattern to match "Name <email@domain.com>" format
+        match = re.match(r'^(.+?)\s*<[^>]+>$', email_addr.strip())
+        if match:
+            name = match.group(1).strip()
+            # Remove surrounding quotes if present
+            if (name.startswith('"') and name.endswith('"')) or \
+               (name.startswith("'") and name.endswith("'")):
+                name = name[1:-1]
+            return name if name else email_addr
+        
+        # If no match, return the original string (likely just an email or name)
+        return email_addr.strip()
     
     @staticmethod
     def _normalize_subject(subject: str) -> str:
@@ -103,13 +134,17 @@ class ThreadedMessageListWidget(QTableWidget):
         self.threads: Dict[str, ConversationThread] = {}
         self.show_threading = True
         self.expanded_threads: set = set()
+        
+        # For column width persistence
+        self.config = None  # Will be set by EmailView
     
     def setup_ui(self):
         """Setup the threaded message list UI."""
         # Configure table
-        self.setColumnCount(6)
+        self.setColumnCount(7)
+        # Reordered columns: Attachment, Importance, Threading, From, Subject, Date, Size
         self.setHorizontalHeaderLabels([
-            "", "From", "Subject", "Date", "Size", "📎"
+            "📎", "❗", "⏵", "From", "Subject", "Date", "Size"
         ])
         
         # Configure selection and behavior
@@ -118,24 +153,141 @@ class ThreadedMessageListWidget(QTableWidget):
         self.setAlternatingRowColors(True)
         self.setSortingEnabled(True)
         
-        # Configure headers
+        # Make table non-editable
+        self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        
+        # Remove grid lines
+        self.setShowGrid(False)
+        
+        # Remove row numbering
+        self.verticalHeader().setVisible(False)
+        
+        # Configure headers - make columns adjustable with Subject stretching
         header = self.horizontalHeader()
         header.setStretchLastSection(False)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)  # Threading indicator
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionsClickable(True)  # Allow sorting by clicking headers
+        header.setSectionsMovable(False)   # Prevent column reordering
         
-        # Set column widths
-        self.setColumnWidth(0, 30)  # Threading indicator column
+        # Set column resize modes - make most columns interactive (resizable)
+        # but keep icon columns fixed for consistency
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)        # Attachment (icon)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)        # Importance (icon)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)        # Threading (icon, smaller)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)  # From (resizable)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)      # Subject (stretches to fill)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.Interactive)  # Date (resizable)
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Interactive)  # Size (resizable)
+        
+        # Set initial column widths (will be overridden by saved settings)
+        self.setColumnWidth(0, 25)   # Attachment column (fixed)
+        self.setColumnWidth(1, 25)   # Importance column (fixed)
+        self.setColumnWidth(2, 20)   # Threading column (fixed, smaller and less intrusive)
+        self.setColumnWidth(3, 150)  # From column (initial width, user can resize)
+        # Subject column will stretch automatically
+        self.setColumnWidth(5, 120)  # Date column (initial width, user can resize)
+        self.setColumnWidth(6, 80)   # Size column (initial width, user can resize)
+        
+        # Add styling to match folder tree font size and make threading less intrusive
+        self.setStyleSheet("""
+            QTableWidget {
+                font-size: 13px;
+                gridline-color: transparent;
+                outline: none;
+                border: none;
+            }
+            QTableWidget::item {
+                padding: 4px;
+                border: none;
+            }
+            QTableWidget::item:selected {
+                background-color: #0078d4;
+                color: white;
+            }
+            QTableWidget::item:hover {
+                background-color: #e5f3ff;
+            }
+        """)
         
         # Connect signals
         self.itemSelectionChanged.connect(self._on_selection_changed)
         self.itemDoubleClicked.connect(self._on_double_clicked)
         self.itemClicked.connect(self._on_item_clicked)
+        
+        # Connect to column resize signal for persistence
+        header.sectionResized.connect(self._on_column_resized)
     
+    def set_config(self, config):
+        """Set the app config for column width persistence."""
+        self.config = config
+        self._load_column_widths()
+    
+    def _load_column_widths(self):
+        """Load saved column widths from config."""
+        if not self.config:
+            return
+            
+        saved_widths = self.config.ui.email_column_widths
+        for column, width in saved_widths.items():
+            if 0 <= column < self.columnCount():
+                self.setColumnWidth(column, width)
+    
+    def _save_column_widths(self):
+        """Save current column widths to config."""
+        if not self.config:
+            return
+            
+        # Save widths for resizable columns only (not stretch column)
+        widths = {}
+        for column in range(self.columnCount()):
+            if column != 4:  # Skip subject column (stretch)
+                widths[column] = self.columnWidth(column)
+        
+        self.config.ui.email_column_widths = widths
+        self.config.save()
+    
+    def _on_column_resized(self, logical_index: int, old_size: int, new_size: int):
+        """Handle column resize event and save to config."""
+        # Only save for resizable columns (not fixed or stretch)
+        if logical_index in [3, 5, 6]:  # From, Date, Size columns
+            self._save_column_widths()
+    
+    def _extract_display_name(self, email_addr: str) -> str:
+        """
+        Extract display name from email address.
+        
+        Examples:
+        - "John Doe <john@example.com>" → "John Doe"
+        - "john@example.com" → "john@example.com"
+        - "John Doe" → "John Doe"
+        """
+        if not email_addr:
+            return ""
+        
+        # Pattern to match "Name <email@domain.com>" format
+        match = re.match(r'^(.+?)\s*<[^>]+>$', email_addr.strip())
+        if match:
+            name = match.group(1).strip()
+            # Remove surrounding quotes if present
+            if (name.startswith('"') and name.endswith('"')) or \
+               (name.startswith("'") and name.endswith("'")):
+                name = name[1:-1]
+            return name if name else email_addr
+        
+        # If no match, return the original string (likely just an email or name)
+        return email_addr.strip()
+    
+    def _format_date_system_locale(self, date_obj: datetime) -> str:
+        """
+        Format date using system locale.
+        Falls back to ISO format if locale formatting fails.
+        """
+        try:
+            # Try to use system locale for date formatting
+            return date_obj.strftime("%x %X")  # %x = locale date, %X = locale time
+        except (ValueError, AttributeError):
+            # Fallback to a readable format if locale formatting fails
+            return date_obj.strftime("%Y-%m-%d %H:%M")
+
     def toggle_threading(self):
         """Toggle conversation threading on/off."""
         self.show_threading = not self.show_threading
@@ -207,12 +359,28 @@ class ThreadedMessageListWidget(QTableWidget):
         row = self.rowCount()
         self.insertRow(row)
         
-        # Threading indicator (expandable)
-        expand_icon = "▼" if thread_id in self.expanded_threads else "▶"
-        indicator_item = QTableWidgetItem(expand_icon)
-        indicator_item.setData(Qt.ItemDataRole.UserRole, {'type': 'thread_header', 'thread_id': thread_id})
-        indicator_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setItem(row, 0, indicator_item)
+        # Attachments indicator (column 0)
+        has_attachments = any(msg.attachments for msg in thread.messages)
+        attachment_item = QTableWidgetItem("📎" if has_attachments else "")
+        attachment_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setItem(row, 0, attachment_item)
+        
+        # Importance indicator (column 1)
+        has_flagged = any(getattr(msg, 'is_flagged', False) for msg in thread.messages)
+        importance_item = QTableWidgetItem("★" if has_flagged else "")
+        importance_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setItem(row, 1, importance_item)
+        
+        # Threading indicator (column 2, less intrusive)
+        expand_icon = "▼" if thread_id in self.expanded_threads else "▶"  # Standard: right when collapsed, down when expanded
+        threading_item = QTableWidgetItem(expand_icon)
+        threading_item.setData(Qt.ItemDataRole.UserRole, {'type': 'thread_header', 'thread_id': thread_id})
+        threading_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Make font smaller and less bold for less intrusive appearance
+        font = threading_item.font()
+        font.setPointSize(font.pointSize() - 1)
+        threading_item.setFont(font)
+        self.setItem(row, 2, threading_item)
         
         # Participants (from addresses)
         participants = thread.get_participants()[:3]  # Show first 3 participants
@@ -225,7 +393,7 @@ class ThreadedMessageListWidget(QTableWidget):
             font = from_item.font()
             font.setBold(True)
             from_item.setFont(font)
-        self.setItem(row, 1, from_item)
+        self.setItem(row, 3, from_item)
         
         # Subject with message count
         subject_text = f"{thread.subject} ({thread.message_count})"
@@ -236,101 +404,136 @@ class ThreadedMessageListWidget(QTableWidget):
             subject_item.setFont(font)
         # Make thread headers slightly different style
         subject_item.setBackground(self.palette().alternateBase())
-        self.setItem(row, 2, subject_item)
+        self.setItem(row, 4, subject_item)
         
         # Latest date
-        date_str = thread.latest_date.strftime("%m/%d/%Y %H:%M")
+        date_str = self._format_date_system_locale(thread.latest_date)
         date_item = QTableWidgetItem(date_str)
         if thread.has_unread:
             font = date_item.font()
             font.setBold(True)
             date_item.setFont(font)
-        self.setItem(row, 3, date_item)
+        self.setItem(row, 5, date_item)
         
         # Total size (approximate)
         total_size = sum(msg.size for msg in thread.messages)
         size_item = QTableWidgetItem(self._format_size(total_size))
-        self.setItem(row, 4, size_item)
-        
-        # Attachments indicator
-        has_attachments = any(msg.attachments for msg in thread.messages)
-        attachment_item = QTableWidgetItem("📎" if has_attachments else "")
-        self.setItem(row, 5, attachment_item)
+        self.setItem(row, 6, size_item)
     
     def _add_thread_message(self, message: EmailMessage, thread_id: str, single_message: bool = False):
         """Add an individual message within a thread."""
         row = self.rowCount()
         self.insertRow(row)
         
-        # Indentation indicator (only for multi-message threads)
-        if single_message:
-            indent_item = QTableWidgetItem("")
-        else:
-            indent_item = QTableWidgetItem("  └")
+        # Attachments indicator (column 0)
+        attachment_item = QTableWidgetItem("📎" if message.attachments else "")
+        attachment_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setItem(row, 0, attachment_item)
         
-        indent_item.setData(Qt.ItemDataRole.UserRole, {
+        # Importance indicator (column 1)
+        importance_icon = "★" if getattr(message, 'is_flagged', False) else ""
+        importance_item = QTableWidgetItem(importance_icon)
+        importance_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setItem(row, 1, importance_item)
+        
+        # Threading indicator (column 2, less intrusive)
+        if single_message:
+            # For single messages, show empty threading column
+            threading_icon = ""
+        else:
+            # For thread messages, show indentation with subtle indicator
+            threading_icon = "  └"  # Indented with tree-like connector
+        
+        threading_item = QTableWidgetItem(threading_icon)
+        threading_item.setData(Qt.ItemDataRole.UserRole, {
             'type': 'thread_message', 
             'thread_id': thread_id, 
             'message': message
         })
-        indent_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setItem(row, 0, indent_item)
+        # For thread messages, align left to show indentation clearly
+        if single_message:
+            threading_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        else:
+            threading_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            # Make font smaller for less intrusive appearance
+            font = threading_item.font()
+            font.setPointSize(max(8, font.pointSize() - 2))  # Smaller font, minimum 8pt
+            threading_item.setFont(font)
         
-        # From
-        from_item = QTableWidgetItem(message.headers.from_addr)
+        self.setItem(row, 2, threading_item)
+        
+        # From (display name only)
+        from_display_name = self._extract_display_name(message.headers.from_addr)
+        # Add indentation for thread messages to show hierarchy
+        if not single_message:
+            from_display_name = "    " + from_display_name  # Indent thread messages
+        
+        from_item = QTableWidgetItem(from_display_name)
         if not message.is_read:
             font = from_item.font()
             font.setBold(True)
             from_item.setFont(font)
-        self.setItem(row, 1, from_item)
+        self.setItem(row, 3, from_item)
         
         # Subject
-        subject_item = QTableWidgetItem(message.headers.subject or "(No Subject)")
+        subject_text = message.headers.subject or "(No Subject)"
+        # Add indentation for thread messages to show hierarchy
+        if not single_message:
+            subject_text = "    " + subject_text  # Indent thread messages
+        
+        subject_item = QTableWidgetItem(subject_text)
         if not message.is_read:
             font = subject_item.font()
             font.setBold(True)
             subject_item.setFont(font)
-        self.setItem(row, 2, subject_item)
+        self.setItem(row, 4, subject_item)
         
-        # Date
-        date_str = message.headers.date.strftime("%m/%d/%Y %H:%M")
+        # Date (system locale format)
+        date_str = self._format_date_system_locale(message.headers.date)
         date_item = QTableWidgetItem(date_str)
         if not message.is_read:
             font = date_item.font()
             font.setBold(True)
             date_item.setFont(font)
-        self.setItem(row, 3, date_item)
+        self.setItem(row, 5, date_item)
         
         # Size
         size_str = self._format_size(message.size)
         size_item = QTableWidgetItem(size_str)
-        self.setItem(row, 4, size_item)
-        
-        # Attachments
-        attachment_item = QTableWidgetItem()
-        if message.attachments:
-            attachment_item.setText("📎")
-        self.setItem(row, 5, attachment_item)
+        self.setItem(row, 6, size_item)
     
     def _add_single_message(self, message: EmailMessage):
         """Add a single message (non-threaded view)."""
         row = self.rowCount()
         self.insertRow(row)
         
-        # Empty threading column
-        self.setItem(row, 0, QTableWidgetItem(""))
+        # Attachments indicator (now column 0)
+        attachment_item = QTableWidgetItem("📎" if message.attachments else "")
+        attachment_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setItem(row, 0, attachment_item)
         
-        # From
-        from_item = QTableWidgetItem(message.headers.from_addr)
-        from_item.setData(Qt.ItemDataRole.UserRole, {
+        # Importance indicator (column 1)
+        importance_icon = "★" if getattr(message, 'is_flagged', False) else ""
+        importance_item = QTableWidgetItem(importance_icon)
+        importance_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setItem(row, 1, importance_item)
+        
+        # Threading (empty for single messages)
+        threading_item = QTableWidgetItem("")
+        threading_item.setData(Qt.ItemDataRole.UserRole, {
             'type': 'single_message', 
             'message': message
         })
+        self.setItem(row, 2, threading_item)
+        
+        # From (display name only)
+        from_display_name = self._extract_display_name(message.headers.from_addr)
+        from_item = QTableWidgetItem(from_display_name)
         if not message.is_read:
             font = from_item.font()
             font.setBold(True)
             from_item.setFont(font)
-        self.setItem(row, 1, from_item)
+        self.setItem(row, 3, from_item)
         
         # Subject
         subject_item = QTableWidgetItem(message.headers.subject or "(No Subject)")
@@ -338,27 +541,21 @@ class ThreadedMessageListWidget(QTableWidget):
             font = subject_item.font()
             font.setBold(True)
             subject_item.setFont(font)
-        self.setItem(row, 2, subject_item)
+        self.setItem(row, 4, subject_item)
         
-        # Date
-        date_str = message.headers.date.strftime("%m/%d/%Y %H:%M")
+        # Date (system locale format)
+        date_str = self._format_date_system_locale(message.headers.date)
         date_item = QTableWidgetItem(date_str)
         if not message.is_read:
             font = date_item.font()
             font.setBold(True)
             date_item.setFont(font)
-        self.setItem(row, 3, date_item)
+        self.setItem(row, 5, date_item)
         
         # Size
         size_str = self._format_size(message.size)
         size_item = QTableWidgetItem(size_str)
-        self.setItem(row, 4, size_item)
-        
-        # Attachments
-        attachment_item = QTableWidgetItem()
-        if message.attachments:
-            attachment_item.setText("📎")
-        self.setItem(row, 5, attachment_item)
+        self.setItem(row, 6, size_item)
     
     def clear_messages(self):
         """Clear all messages and threads."""
@@ -369,7 +566,7 @@ class ThreadedMessageListWidget(QTableWidget):
         """Get the currently selected message."""
         current_row = self.currentRow()
         if current_row >= 0:
-            item = self.item(current_row, 1)  # Get from column item
+            item = self.item(current_row, 2)  # Get threading column item (has data, now column 2)
             if item:
                 data = item.data(Qt.ItemDataRole.UserRole)
                 if data:
@@ -407,7 +604,7 @@ class ThreadedMessageListWidget(QTableWidget):
     
     def _on_item_clicked(self, item):
         """Handle item click (for expanding/collapsing threads)."""
-        if item.column() == 0:  # Threading indicator column
+        if item.column() == 2:  # Threading indicator column (now column 2)
             data = item.data(Qt.ItemDataRole.UserRole)
             if data and data.get('type') == 'thread_header':
                 thread_id = data.get('thread_id')
@@ -1256,6 +1453,11 @@ class EmailView(QWidget):
         self.folder_tree.folder_selected.connect(self.on_folder_selected)
         self.message_list.message_selected.connect(self.on_message_selected)
         self.message_list.message_double_clicked.connect(self.on_message_double_clicked)
+    
+    def set_config(self, config):
+        """Set the app config for column width persistence."""
+        self.config = config
+        self.message_list.set_config(config)
     
     def load_accounts(self, accounts: List[Account]):
         """Load accounts and their folders into the folder tree."""
