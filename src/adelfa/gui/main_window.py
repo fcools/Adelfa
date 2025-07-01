@@ -393,9 +393,9 @@ class AdelfahMainWindow(QMainWindow):
             self.preview_right_action.setChecked(position == "right")
             self.preview_bottom_action.setChecked(position == "bottom")
         
-        # Apply the position to email view if it exists
+        # Apply the position to email view if it exists (without saving to avoid double-save)
         if hasattr(self, 'email_widget') and self.email_widget:
-            self.email_widget.set_preview_pane_position(position)
+            self.email_widget._apply_preview_pane_position(position)
     
     def _create_folder_tree(self) -> QTreeWidget:
         """

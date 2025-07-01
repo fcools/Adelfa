@@ -1461,10 +1461,21 @@ class EmailView(QWidget):
         """Set the app config for column width persistence."""
         self.config = config
         self.message_list.set_config(config)
+        # Load preview pane position from config
+        self._load_preview_pane_position()
     
-    def set_preview_pane_position(self, position: str):
+    def _load_preview_pane_position(self):
+        """Load preview pane position from config."""
+        if not self.config:
+            return
+        
+        position = self.config.ui.preview_pane_position
+        # Apply the position without saving it back to config (to avoid infinite loop)
+        self._apply_preview_pane_position(position)
+    
+    def _apply_preview_pane_position(self, position: str):
         """
-        Set the preview pane position.
+        Apply the preview pane position without saving to config.
         
         Args:
             position: Position of preview pane: 'off', 'right', or 'bottom'
@@ -1494,6 +1505,16 @@ class EmailView(QWidget):
             self.right_splitter.setOrientation(Qt.Orientation.Vertical)
             # Adjust proportions: more space for message list
             self.right_splitter.setSizes([500, 300])
+    
+    def set_preview_pane_position(self, position: str):
+        """
+        Set the preview pane position and save to config.
+        
+        Args:
+            position: Position of preview pane: 'off', 'right', or 'bottom'
+        """
+        # Apply the position
+        self._apply_preview_pane_position(position)
         
         # Update config if available
         if hasattr(self, 'config') and self.config:
