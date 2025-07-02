@@ -437,15 +437,16 @@ class AccountEditDialog(QDialog):
             success = self.account_manager.repository.update_account(self.account.id, updates)
             
             if success:
-                QMessageBox.information(self, "Success", "Account updated successfully!")
-                self.account_updated.emit(self.account)
+                QMessageBox.information(self, _("email.account_manager.groups.settings_saved"),
+                                        _("email.account_manager.messages.account_updated"))
                 self.accept()
-            else:
-                QMessageBox.warning(self, "Error", "Failed to update account.")
-                
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to save account: {e}")
-            logger.error(f"Failed to save account: {e}")
+            except Exception as e:
+                # Failed to save to database
+                QMessageBox.warning(self, _("email.account_manager.messages.save_error"), _("email.account_manager.messages.save_db_failed"))
+            except AttributeError:
+                QMessageBox.critical(self, _("email.account_manager.messages.save_error"), _("email.account_manager.messages.no_account_manager"))
+            except Exception as e:
+                QMessageBox.critical(self, _("email.account_manager.messages.save_error"), _("email.account_manager.messages.save_settings_failed").format(error=str(e)))
 
 
 class QuickServerConfigDialog(QDialog):
@@ -1215,9 +1216,9 @@ class AccountManagerDialog(QDialog):
             if success:
                 self.load_accounts()
                 self.accounts_changed.emit()
-                QMessageBox.information(self, "Success", f"'{account.name}' is now the default account.")
+                QMessageBox.information(self, _("email.account_manager.messages.success"), _("email.account_manager.messages.default_set").format(name=account.name))
             else:
-                QMessageBox.warning(self, "Error", "Failed to set default account.")
+                QMessageBox.warning(self, _("email.account_manager.messages.error"), _("email.account_manager.messages.default_failed"))
                 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to set default account: {e}") 
+            QMessageBox.critical(self, _("email.account_manager.messages.error"), _("email.account_manager.messages.default_error").format(error=str(e))) 
