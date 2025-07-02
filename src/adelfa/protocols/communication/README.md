@@ -34,7 +34,7 @@ video_call.show()
 jitsi = JitsiMeetingManager()
 meeting = jitsi.create_meeting(
     meeting_name="Project Review",
-    password="secret123",
+    password="<your-meeting-password>",
     start_time=datetime(2025, 1, 15, 14, 0)
 )
 ```
@@ -65,7 +65,7 @@ Matrix integration provides secure, decentralized messaging compatible with Elem
 from adelfa.protocols.communication.matrix_client import MatrixClient
 
 # Connect to Matrix server
-matrix = MatrixClient("@user:matrix.org", "password")
+matrix = MatrixClient("@user:matrix.org", "<your-password>")
 await matrix.connect()
 
 # Send message to contact
@@ -91,7 +91,7 @@ SIP integration enables traditional voice calling through contacts, similar to S
 from adelfa.protocols.voip.sip_client import SIPClient
 
 # Configure SIP account
-sip = SIPClient("user@voip-provider.com", "password", "sip.voip-provider.com")
+sip = SIPClient("user@voip-provider.com", "<your-password>", "sip.voip-provider.com")
 
 # Make call to contact
 call = sip.call_contact("john@example.com")
