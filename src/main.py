@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from adelfa.gui.main_window import AdelfahMainWindow
 from adelfa.config.app_config import AppConfig
 from adelfa.utils.logging_setup import setup_logging, get_logger
-from adelfa.utils.i18n import locale_manager
+from adelfa.utils.i18n import locale_manager, get_translator
 from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtGui import QIcon
@@ -157,11 +157,13 @@ def main() -> int:
             logger.info("Database session created successfully")
         except Exception as db_error:
             logger.error(f"Database initialization failed: {db_error}")
+            
+            # Get translator for localized error messages
+            _ = get_translator()
             QMessageBox.critical(
                 None,
-                "Database Error",
-                f"Failed to initialize database:\n{str(db_error)}\n\n"
-                "The application will run with limited functionality."
+                _("app.errors.database_error"),
+                _("app.errors.database_failed", error=str(db_error))
             )
             session = None
         
@@ -172,14 +174,17 @@ def main() -> int:
             from PyQt6.QtGui import QPixmap, QPainter
             from PyQt6.QtCore import Qt
             
+            # Get translator for localized text
+            _ = get_translator()
+            
             # Create a solid color splash screen to cover any buffer flash
             splash_pixmap = QPixmap(800, 600)
             splash_pixmap.fill(Qt.GlobalColor.white)  # Solid white background
             
-            # Add simple text
+            # Add localized text
             painter = QPainter(splash_pixmap)
             painter.setPen(Qt.GlobalColor.black)
-            painter.drawText(splash_pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "Loading Adelfa...")
+            painter.drawText(splash_pixmap.rect(), Qt.AlignmentFlag.AlignCenter, _("app.splash.loading"))
             painter.end()
             
             splash = QSplashScreen(splash_pixmap)
@@ -224,10 +229,12 @@ def main() -> int:
             print(error_msg, file=sys.stderr)
         
         if app:
+            # Get translator for localized error messages
+            _ = get_translator()
             QMessageBox.critical(
                 None,
-                "Fatal Error",
-                f"Adelfa failed to start:\n{str(e)}"
+                _("app.errors.fatal_error"),
+                _("app.errors.startup_failed", error=str(e))
             )
         
         return 1

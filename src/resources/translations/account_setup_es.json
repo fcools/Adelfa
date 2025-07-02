@@ -1,0 +1,79 @@
+{
+  "app": {
+    "splash": {
+      "loading": "Cargando Adelfa..."
+    },
+    "errors": {
+      "database_error": "Error de Base de Datos",
+      "database_failed": "Fallo al inicializar la base de datos:\n{error}\n\nLa aplicación funcionará con funcionalidad limitada.",
+      "fatal_error": "Error Fatal",
+      "startup_failed": "Adelfa falló al iniciar:\n{error}"
+    }
+  },
+  "account_setup": {
+    "title": "Configuración de Cuenta",
+    "welcome": {
+      "title": "Bienvenido a Adelfa",
+      "subtitle": "Configuremos tu correo electrónico, calendario y contactos",
+      "description": "Adelfa puede gestionar tus cuentas de correo electrónico y sincronizar calendarios y contactos de los mismos proveedores. Este asistente te guiará a través del proceso de configuración.",
+      "features": "Características",
+      "feature_email": "Gestión de correo electrónico con soporte de múltiples cuentas",
+      "feature_calendar": "Sincronización de calendario vía CalDAV",
+      "feature_contacts": "Sincronización de contactos vía CardDAV",
+      "feature_security": "Almacenamiento seguro de credenciales con llavero del sistema",
+      "get_started": "Empezar"
+    },
+    "provider_selection": {
+      "title": "Elige tu Proveedor",
+      "subtitle": "Selecciona tu proveedor de correo o configura manualmente",
+      "setup_type": "Tipo de Configuración",
+      "automatic_setup": "Configuración Automática",
+      "manual_setup": "Configuración Manual",
+      "manual_info": "Para la configuración manual, necesitarás configurar los ajustes del servidor tú mismo. Esto es útil para servidores de correo personalizados o cuando la detección automática falla.",
+      "common_providers": "Proveedores Comunes",
+      "other_provider": "Otro Proveedor",
+      "enter_email": "Introduce tu dirección de correo electrónico",
+      "email_placeholder": "tu.correo@ejemplo.com",
+      "detect_settings": "Detectar Configuración",
+      "detecting": "Detectando configuración...",
+      "detection_success": "Configuración detectada exitosamente",
+      "detection_failed": "No se pudo detectar la configuración automáticamente. Por favor configura manualmente.",
+      "next": "Siguiente",
+      "back": "Atrás"
+    },
+    "account_details": {
+      "title": "Detalles de Cuenta",
+      "subtitle": "Configura los ajustes de tu cuenta",
+      "account_name": "Nombre de Cuenta",
+      "account_name_placeholder": "Mi Cuenta de Correo",
+      "display_name": "Tu Nombre",
+      "display_name_placeholder": "Juan Pérez",
+      "email_address": "Dirección de Correo Electrónico",
+      "email_address_placeholder": "tu.correo@ejemplo.com",
+      "credentials": "Credenciales",
+      "password": "Contraseña",
+      "password_placeholder": "Introduce tu contraseña",
+      "show_password": "Mostrar contraseña",
+      "hide_password": "Ocultar contraseña",
+      "save_password": "Guardar contraseña de forma segura",
+      "save_password_help": "Las contraseñas se almacenan de forma segura usando el llavero de tu sistema",
+      "test_connection": "Probar Conexión",
+      "testing": "Probando conexión...",
+      "connection_success": "¡Conexión exitosa!",
+      "connection_failed": "Conexión falló: {error}",
+      "advanced_settings": "Configuración Avanzada",
+      "default_account_name": "Cuenta",
+      "default_email_account": "Cuenta de Correo"
+    },
+    "buttons": {
+      "next": "Siguiente",
+      "back": "Atrás",
+      "finish": "Finalizar",
+      "cancel": "Cancelar",
+      "test": "Probar",
+      "detect": "Auto-detectar",
+      "retry": "Reintentar",
+      "skip": "Omitir"
+    }
+  }
+} 

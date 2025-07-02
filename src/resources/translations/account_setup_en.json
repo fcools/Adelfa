@@ -1,4 +1,15 @@
 {
+  "app": {
+    "splash": {
+      "loading": "Loading Adelfa..."
+    },
+    "errors": {
+      "database_error": "Database Error",
+      "database_failed": "Failed to initialize database:\n{error}\n\nThe application will run with limited functionality.",
+      "fatal_error": "Fatal Error",
+      "startup_failed": "Adelfa failed to start:\n{error}"
+    }
+  },
   "account_setup": {
     "title": "Account Setup",
     "welcome": {
