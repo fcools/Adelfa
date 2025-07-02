@@ -172,6 +172,35 @@ Adelfa is a complete Personal Information Management (PIM) suite providing email
   - [ ] Task creation from emails
   - [ ] Email attachment to notes
 
+### 🔧 Discovered During Work - July 2nd, 2025
+
+#### 📧 Email Display Issues
+- [x] **Fix HTML email layout rendering** (July 2nd, 2025) ✅ COMPLETED
+  - [x] Improve HTML sanitization to preserve layout elements
+  - [x] Enhance CSS support for complex email layouts (border-radius, box-shadow, gradients)
+  - [x] Fix image display with proper HTML structure
+  - [x] Add comprehensive HTML cleaning while preserving formatting
+  - [x] Add comprehensive unit tests for HTML rendering
+  - [x] Fix CSS cleaning logic to preserve safe CSS while removing dangerous elements
+  - [x] Add support for modern CSS properties (flexbox, grid, animations, shadows)
+  - [x] Add extensive button and layout styling support
+  - [x] Fix issue with rounded buttons displaying as squared
+  - [x] **Fix Qt CSS parser compatibility issues** (July 2nd, 2025) ✅ COMPLETED
+    - [x] Remove problematic CSS properties causing Qt parser errors (box-shadow, transform, transition)
+    - [x] Fix malformed color values (#0000 → #000000, 3-digit → 6-digit hex)
+    - [x] Remove CSS inheritance issues (border-radius: inherit)
+    - [x] Simplify default stylesheet for Qt CSS engine compatibility
+    - [x] Add comprehensive CSS value cleaning for email content
+    - [x] Update unit tests to reflect Qt-compatible CSS behavior
+  - [x] **MAJOR UPGRADE: Replace QTextEdit with QWebEngineView** (July 2nd, 2025) ✅ COMPLETED
+    - [x] Implemented Chromium-based web engine for email display
+    - [x] Full support for modern CSS3 features (gradients, shadows, animations, transforms)
+    - [x] Perfect rendering of complex email layouts and responsive designs
+    - [x] Eliminated all Qt CSS parser limitations and compatibility issues
+    - [x] Maintained security with proper HTML sanitization for web engine
+    - [x] Removed Qt-specific CSS workarounds (no longer needed)
+    - [x] Enhanced email display with native browser-quality rendering
+
 ### 📋 Backlog - Phase 4 (Outlook Compatibility)
 
 #### 📁 Import/Export & Migration

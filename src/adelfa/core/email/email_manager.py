@@ -66,7 +66,7 @@ class EmailManager:
         
         # Cache settings
         self.cache_max_age_folders = timedelta(hours=1)  # Refresh folders every hour
-        self.cache_max_age_messages = timedelta(minutes=15)  # Refresh messages every 15 minutes
+        self.cache_max_age_messages = timedelta(hours=4)  # Refresh messages every 4 hours
     
     def add_account(self, account: Account) -> bool:
         """
@@ -410,9 +410,12 @@ class EmailManager:
             
         except Exception as e:
             self.logger.error(f"Failed to get recent messages: {e}")
-            # Fallback to cache if server fetch fails
+            # Fallback to cache if server fetch fails (even if stale)
             if use_cache:
-                return self.cache_manager.get_cached_messages(account_id, folder, limit)
+                cached_messages = self.cache_manager.get_cached_messages(account_id, folder, limit)
+                if cached_messages:
+                    self.logger.info(f"Using stale cached messages as fallback for {folder}")
+                    return cached_messages
             return []
     
     def send_email(self, email: OutgoingEmail, account_id: Optional[int] = None) -> bool:

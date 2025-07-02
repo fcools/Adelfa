@@ -7,11 +7,12 @@ message preview, and email composition functionality.
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QTreeWidget, QTreeWidgetItem,
-    QTableWidget, QTableWidgetItem, QTextEdit, QToolBar, QComboBox, QLineEdit,
+    QTableWidget, QTableWidgetItem, QToolBar, QComboBox, QLineEdit,
     QPushButton, QLabel, QFrame, QHeaderView, QAbstractItemView, QMenu,
     QMessageBox, QProgressBar, QStatusBar, QCheckBox, QDateEdit, QGroupBox,
     QSizePolicy
 )
+from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread, pyqtSlot, QDate
 from PyQt6.QtGui import QIcon, QFont, QAction, QPixmap, QKeySequence, QBrush, QColor
 from typing import List, Optional, Dict, Any, Tuple
@@ -1015,8 +1016,8 @@ class FolderTreeWidget(QTreeWidget):
                 self.folder_selected.emit(data['folder_name'], data['account_id'])
 
 
-class MessagePreviewWidget(QTextEdit):
-    """Custom text edit for displaying email message content with attachment and image support."""
+class MessagePreviewWidget(QWebEngineView):
+    """Custom web engine view for displaying email message content with full HTML/CSS support."""
     
     # Signal for requesting image loading decisions
     image_decision_requested = pyqtSignal(str, str)  # email_hash, message_text
@@ -1031,100 +1032,70 @@ class MessagePreviewWidget(QTextEdit):
         self.current_email_hash = None
         self.cache_manager = None
         self.config = None
+        
+        # Track current session state for this email (temporary, not saved)
+        self.current_session_images_enabled = False
+        self.current_session_links_enabled = False
     
     def setup_ui(self):
-        """Setup the message preview UI."""
-        self.setReadOnly(True)
+        """Setup the message preview UI with web engine."""
         self.setMinimumHeight(300)
         
         # Set proper size policy to fill available space
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         
-        # Configure scrollbars
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        
-        # Enable word wrap for long content
-        self.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
-        
         # Configure viewport
-        self.setViewportMargins(0, 0, 0, 0)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         
-        # Disable automatic external link opening for security
-        try:
-            self.setOpenExternalLinks(False)
-        except AttributeError:
-            # Method not available in this Qt version
-            pass
+        # Create a custom web page with link handling
+        from PyQt6.QtWebEngineCore import QWebEnginePage
         
-        # Connect link clicked signal to our handler
-        try:
-            self.anchorClicked.connect(self._on_link_clicked)
-        except AttributeError:
-            # anchorClicked signal not available in this Qt version
-            # We'll handle this with mousePressEvent override instead
-            pass
+        class CustomWebPage(QWebEnginePage):
+            def __init__(self, parent_widget):
+                super().__init__(parent_widget)
+                self.parent_widget = parent_widget
+            
+            def acceptNavigationRequest(self, url, navigation_type, is_main_frame):
+                """Override navigation to handle custom links and security."""
+                from PyQt6.QtWebEngineCore import QWebEnginePage
+                
+                url_str = url.toString()
+                
+                # Allow initial page loads and HTML content loading
+                if (not url_str or 
+                    url_str in ("about:blank", "") or
+                    url_str.startswith("data:") or
+                    navigation_type == QWebEnginePage.NavigationType.NavigationTypeTyped or
+                    navigation_type == QWebEnginePage.NavigationType.NavigationTypeReload):
+                    return True
+                
+                # Handle our custom protocol links (user clicks)
+                if url_str.startswith('adelfa://'):
+                    self.parent_widget._handle_custom_link(url_str)
+                    return False  # Block navigation but handle the action
+                
+                # Handle external links (user clicks)
+                elif url_str.startswith(('http://', 'https://', 'mailto:')):
+                    self.parent_widget._handle_external_link(url_str)
+                    return False  # Block navigation but handle the action
+                
+                # Allow any other content that isn't a user-initiated link click
+                if navigation_type != QWebEnginePage.NavigationType.NavigationTypeLinkClicked:
+                    return True
+                
+                # Block link clicks to unknown protocols for security
+                return False
         
-        # Configure document to allow external resources when needed
-        document = self.document()
-        if hasattr(document, 'setDefaultStyleSheet'):
-            document.setDefaultStyleSheet("""
-                img { max-width: 100%; height: auto; }
-                body { font-family: Arial, sans-serif; font-size: 14px; }
-            """)
-        
-        # Set up network access manager for loading external images
-        try:
-            from PyQt6.QtNetwork import QNetworkAccessManager
-            from PyQt6.QtWidgets import QApplication
-            app = QApplication.instance()
-            if hasattr(app, 'networkAccessManager'):
-                # Use application's network manager if available
-                pass
-            else:
-                # Create our own network manager
-                self.network_manager = QNetworkAccessManager(self)
-        except ImportError:
-            # Network module not available
-            pass
+        # Set custom page
+        custom_page = CustomWebPage(self)
+        self.setPage(custom_page)
     
-    def mousePressEvent(self, event):
-        """Handle mouse press events, including link clicks."""
-        # Check if we clicked on a link
-        cursor = self.cursorForPosition(event.pos())
-        char_format = cursor.charFormat()
-        
-        if char_format.isAnchor():
-            anchor_href = char_format.anchorHref()
-            if anchor_href == "adelfa://load-images":
-                # Handle image loading request
-                self._prompt_for_image_loading()
-                return
-            else:
-                # Handle other links (open externally)
-                from PyQt6.QtGui import QDesktopServices
-                from PyQt6.QtCore import QUrl
-                QDesktopServices.openUrl(QUrl(anchor_href))
-                return
-        
-        # Call parent implementation for normal handling
-        super().mousePressEvent(event)
-    
-    def _on_link_clicked(self, url):
-        """Handle link clicks in the email content with security controls."""
-        from PyQt6.QtCore import QUrl
-        
-        url_str = url.toString() if isinstance(url, QUrl) else str(url)
-        
+    def _handle_custom_link(self, url_str: str):
+        """Handle our custom adelfa:// protocol links."""
         if url_str == "adelfa://load-images":
-            # Handle image loading request
             self._prompt_for_image_loading()
         elif url_str == "adelfa://open-links":
-            # Handle link opening request
             self._prompt_for_link_opening()
-        else:
-            # Handle external links based on security settings
-            self._handle_external_link(url_str)
     
     def set_cache_manager(self, cache_manager):
         """Set the cache manager for image handling."""
@@ -1138,6 +1109,10 @@ class MessagePreviewWidget(QTextEdit):
         """Display an email message with attachment, image, and link support."""
         self.current_message = message
         self.current_email_hash = self._get_email_hash(message)
+        
+        # Reset session state for new message
+        self.current_session_images_enabled = False
+        self.current_session_links_enabled = False
         
         # Check if we should load images and enable links
         should_load_images = self._should_load_images()
@@ -1154,7 +1129,9 @@ class MessagePreviewWidget(QTextEdit):
         """Clear the message display."""
         self.current_message = None
         self.current_email_hash = None
-        self.clear()
+        self.current_session_images_enabled = False
+        self.current_session_links_enabled = False
+        self.setHtml("")
     
     def _get_email_hash(self, message: EmailMessage) -> str:
         """Generate a unique hash for the current email."""
@@ -1164,6 +1141,10 @@ class MessagePreviewWidget(QTextEdit):
     
     def _should_load_images(self) -> bool:
         """Determine if images should be loaded for the current email."""
+        # Check session state first (temporary "Load Once" decisions)
+        if self.current_session_images_enabled:
+            return True
+            
         if not self.config or not self.current_email_hash:
             return False
         
@@ -1185,6 +1166,10 @@ class MessagePreviewWidget(QTextEdit):
     
     def _should_enable_links(self) -> bool:
         """Determine if links should be enabled for the current email."""
+        # Check session state first (temporary "Enable Once" decisions)
+        if self.current_session_links_enabled:
+            return True
+            
         if not self.config or not self.current_email_hash:
             return False
         
@@ -1230,13 +1215,14 @@ class MessagePreviewWidget(QTextEdit):
         
         if clicked_button == load_once_btn:
             # Load images just this time, don't save decision
-            self._reload_with_images(True)
+            self.current_session_images_enabled = True
+            self._reload_current_message()
         elif clicked_button == always_load_btn:
             # Save decision and load images
             if self.cache_manager and self.current_email_hash:
                 self.cache_manager.set_image_decision(self.current_email_hash, True)
                 self.status_message.emit("Images will always be loaded for this email", 3000)
-            self._reload_with_images(True)
+            self._reload_current_message()
         elif clicked_button == dont_load_btn:
             # Save decision to not load
             if self.cache_manager and self.current_email_hash:
@@ -1269,18 +1255,43 @@ class MessagePreviewWidget(QTextEdit):
         
         if clicked_button == enable_once_btn:
             # Enable links just this time, don't save decision
-            self._reload_with_links(True)
+            self.current_session_links_enabled = True
+            self._reload_current_message()
         elif clicked_button == always_enable_btn:
             # Save decision and enable links
             if self.cache_manager and self.current_email_hash:
                 self.cache_manager.set_link_decision(self.current_email_hash, True)
                 self.status_message.emit("Links will always be enabled for this email", 3000)
-            self._reload_with_links(True)
+            self._reload_current_message()
         elif clicked_button == dont_enable_btn:
             # Save decision to not enable
             if self.cache_manager and self.current_email_hash:
                 self.cache_manager.set_link_decision(self.current_email_hash, False)
                 self.status_message.emit("Links will remain disabled for this email", 3000)
+    
+    def _reload_current_message(self):
+        """Reload the current message with current session state for images and links."""
+        if not self.current_message:
+            return
+            
+        # Get current state for both images and links
+        should_load_images = self._should_load_images()
+        should_enable_links = self._should_enable_links()
+        
+        if should_load_images:
+            # Show loading message while downloading images
+            self.status_message.emit("Loading images...", 0)
+        
+        html_content = self._build_message_html(
+            self.current_message, 
+            load_images=should_load_images, 
+            enable_links=should_enable_links
+        )
+        self.setHtml(html_content)
+        
+        if should_load_images:
+            # Clear loading message
+            self.status_message.emit("Images loaded", 2000)
     
     def _reload_with_images(self, load_images: bool):
         """Reload the current message with or without images."""
@@ -1489,10 +1500,65 @@ class MessagePreviewWidget(QTextEdit):
         cleaned_html = self._clean_html_content(html_content)
         
         if not load_images:
-            # Replace image sources with placeholder
+            # Replace image sources with placeholder that preserves layout
+            def replace_with_placeholder(match):
+                """Replace image with a layout-preserving placeholder."""
+                full_tag = match.group(0)
+                
+                # Extract width and height attributes if they exist
+                width_match = re.search(r'width\s*=\s*["\']?(\d+)["\']?', full_tag, re.IGNORECASE)
+                height_match = re.search(r'height\s*=\s*["\']?(\d+)["\']?', full_tag, re.IGNORECASE)
+                
+                width = width_match.group(1) if width_match else "100"
+                height = height_match.group(1) if height_match else "50"
+                
+                # Create a placeholder SVG that maintains the original dimensions
+                placeholder_svg = f"""data:image/svg+xml;base64,{base64.b64encode(f'''
+                <svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="{width}" height="{height}" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1"/>
+                    <g transform="translate({int(width)//2 - 10}, {int(height)//2 - 10})">
+                        <rect x="2" y="2" width="16" height="16" fill="#e9ecef" rx="2"/>
+                        <path d="M6 8l2 2 4-4" stroke="#6c757d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </g>
+                    <text x="{int(width)//2}" y="{int(height) - 5}" text-anchor="middle" fill="#6c757d" font-family="Arial, sans-serif" font-size="8">Image blocked</text>
+                </svg>
+                '''.encode()).decode()}"""
+                
+                # Replace the src while preserving other attributes
+                placeholder_tag = re.sub(
+                    r'src\s*=\s*["\'][^"\']*["\']',
+                    f'src="{placeholder_svg}"',
+                    full_tag,
+                    flags=re.IGNORECASE
+                )
+                
+                # Add title and alt attributes if not present
+                if 'alt=' not in placeholder_tag.lower():
+                    placeholder_tag = placeholder_tag.replace('<img', '<img alt="[Image blocked for privacy]"', 1)
+                if 'title=' not in placeholder_tag.lower():
+                    placeholder_tag = placeholder_tag.replace('<img', '<img title="Image blocked for privacy - click to load images"', 1)
+                
+                # Ensure responsive behavior while preserving layout
+                if 'style=' in placeholder_tag.lower():
+                    # Add to existing style
+                    placeholder_tag = re.sub(
+                        r'style\s*=\s*["\']([^"\']*)["\']',
+                        r'style="\1; max-width: 100%; height: auto; cursor: pointer;"',
+                        placeholder_tag,
+                        flags=re.IGNORECASE
+                    )
+                else:
+                    # Add new style attribute
+                    placeholder_tag = placeholder_tag.replace('<img', '<img style="max-width: 100%; height: auto; cursor: pointer;"', 1)
+                
+                return placeholder_tag
+            
+            # Import base64 for placeholder generation
+            import base64
+            
             cleaned_html = re.sub(
-                r'(<img[^>]+)src=(["\'])[^"\']*\2([^>]*>)',
-                r'\1src=\2data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNSA3SDVWMTNIMTVWN1oiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPHBhdGggZD0iTTcgOUw5IDExTDEzIDciIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg==\2 alt="[Image blocked]" title="Image blocked for privacy"\3',
+                r'<img[^>]+src\s*=\s*["\'][^"\']*["\'][^>]*>',
+                replace_with_placeholder,
                 cleaned_html,
                 flags=re.IGNORECASE
             )
@@ -1527,7 +1593,8 @@ class MessagePreviewWidget(QTextEdit):
         from urllib.parse import urlparse
         
         def replace_image_src(match):
-            """Replace external image URLs with data URLs."""
+            """Replace external image URLs with data URLs while preserving HTML structure."""
+            # Capture groups: 1=prefix, 2=quote, 3=url, 4=suffix
             prefix = match.group(1)  # Everything before src=
             quote = match.group(2)  # Quote character (' or ")
             url = match.group(3)     # The image URL
@@ -1535,6 +1602,10 @@ class MessagePreviewWidget(QTextEdit):
             
             # Skip if already a data URL
             if url.startswith('data:'):
+                return match.group(0)
+            
+            # Skip relative URLs without domain
+            if url.startswith('/') or url.startswith('./') or url.startswith('../'):
                 return match.group(0)
             
             # Check cache first
@@ -1554,7 +1625,13 @@ class MessagePreviewWidget(QTextEdit):
                 
                 # Download the image with timeout and size limits
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1'
                 }
                 
                 response = requests.get(url, headers=headers, timeout=10, stream=True)
@@ -1563,7 +1640,12 @@ class MessagePreviewWidget(QTextEdit):
                 # Check content type
                 content_type = response.headers.get('content-type', '').lower()
                 if not content_type.startswith('image/'):
-                    return match.group(0)
+                    # Try to guess content type from URL extension
+                    if url.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp')):
+                        ext = url.lower().split('.')[-1]
+                        content_type = f'image/{ext}' if ext != 'jpg' else 'image/jpeg'
+                    else:
+                        return match.group(0)
                 
                 # Check file size (limit to 5MB)
                 content_length = response.headers.get('content-length')
@@ -1591,7 +1673,14 @@ class MessagePreviewWidget(QTextEdit):
                 if self.cache_manager and self.current_email_hash:
                     self.cache_manager.cache_image(url, self.current_email_hash, content_type, image_data)
                 
-                return f'{prefix}src={quote}{data_url}{quote}{suffix}'
+                # Preserve any existing style attributes while adding responsive sizing
+                if 'style=' in suffix.lower():
+                    # Image already has style attribute, preserve it
+                    return f'{prefix}src={quote}{data_url}{quote}{suffix}'
+                else:
+                    # Add responsive styling to prevent layout breaks
+                    style_attr = ' style="max-width: 100%; height: auto; display: block;"'
+                    return f'{prefix}src={quote}{data_url}{quote}{style_attr}{suffix}'
                 
             except Exception as e:
                 # Log error and return original
@@ -1599,13 +1688,43 @@ class MessagePreviewWidget(QTextEdit):
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to load image {url}: {e}")
                 
-                # Return with placeholder on error
+                # Return with error placeholder that preserves layout
                 placeholder_url = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkY2MzYzIi8+CjxwYXRoIGQ9Ik0xMCAxNEw2IDEwSDhWNkgxMlYxMEgxNEwxMCAxNFoiIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg=="
-                return f'{prefix}src={quote}{placeholder_url}{quote} alt="[Image failed to load]" title="Failed to load: {url}"{suffix}'
+                return f'{prefix}src={quote}{placeholder_url}{quote} alt="[Image failed to load]" title="Failed to load: {url}" style="max-width: 100px; height: auto; border: 1px solid #ccc; padding: 5px;"{suffix}'
         
-        # Use regex to find and replace all image sources
-        pattern = r'(<img[^>]+)src=(["\'])([^"\']+)\2([^>]*>)'
-        return re.sub(pattern, replace_image_src, html_content, flags=re.IGNORECASE)
+        # Use more specific regex pattern to better handle various image tag formats
+        # This pattern captures img tags more reliably while preserving structure
+        pattern = r'(<img[^>]*?\s+)src\s*=\s*(["\'])([^"\']+)\2([^>]*>)'
+        processed_html = re.sub(pattern, replace_image_src, html_content, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Also handle CSS background images in style attributes
+        def replace_bg_image(match):
+            """Replace CSS background image URLs with data URLs."""
+            full_match = match.group(0)
+            url = match.group(1)
+            
+            # Skip if already a data URL
+            if url.startswith('data:'):
+                return full_match
+            
+            # Check cache first
+            if self.cache_manager and self.current_email_hash:
+                cached_image = self.cache_manager.get_cached_image(url, self.current_email_hash)
+                if cached_image:
+                    content_type, image_data = cached_image
+                    base64_data = base64.b64encode(image_data).decode('ascii')
+                    data_url = f"data:{content_type};base64,{base64_data}"
+                    return full_match.replace(url, data_url)
+            
+            # For background images, we'll keep the original URL to avoid layout issues
+            # Users can still choose to load images which will process these too
+            return full_match
+        
+        # Handle CSS background images
+        bg_pattern = r'background-image\s*:\s*url\s*\(\s*["\']?([^"\')\s]+)["\']?\s*\)'
+        processed_html = re.sub(bg_pattern, replace_bg_image, processed_html, flags=re.IGNORECASE)
+        
+        return processed_html
     
     def _process_text_content(self, text_content: str, enable_links: bool) -> str:
         """Process plain text content, converting to HTML and handling links."""
@@ -1746,21 +1865,124 @@ class MessagePreviewWidget(QTextEdit):
         return content_type.lower() in previewable_types
     
     def _clean_html_content(self, html_content: str) -> str:
-        """Clean HTML content for security (basic implementation)."""
-        # Basic HTML cleaning - in production, use a proper HTML sanitizer
-        # Remove script tags and dangerous attributes
-        import re
+        """
+        Clean HTML content for security while preserving layout structure.
         
-        # Remove script tags
-        html_content = re.sub(r'<script[^>]*>.*?</script>', '', html_content, flags=re.DOTALL | re.IGNORECASE)
+        Uses BeautifulSoup4 for proper HTML parsing and cleaning.
+        """
+        try:
+            from bs4 import BeautifulSoup, NavigableString
+            import re
+            
+            # Parse HTML with BeautifulSoup
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Remove dangerous tags completely
+            dangerous_tags = ['script', 'object', 'embed', 'applet', 'form', 'input']
+            for tag_name in dangerous_tags:
+                for tag in soup.find_all(tag_name):
+                    tag.decompose()
+            
+            # Remove dangerous attributes from all tags
+            dangerous_attrs = [
+                'onload', 'onclick', 'onmouseover', 'onmouseout', 'onerror', 
+                'onchange', 'onsubmit', 'onreset', 'onfocus', 'onblur',
+                'onkeydown', 'onkeyup', 'onkeypress', 'ondblclick',
+                'oncontextmenu', 'onresize', 'onscroll', 'javascript:'
+            ]
+            
+            for tag in soup.find_all():
+                # Clean attributes
+                attrs_to_remove = []
+                for attr_name, attr_value in tag.attrs.items():
+                    # Remove dangerous attributes
+                    if attr_name.lower() in dangerous_attrs:
+                        attrs_to_remove.append(attr_name)
+                    # Remove javascript: URLs (but not from style attributes which are cleaned separately)
+                    elif attr_name.lower() != 'style' and isinstance(attr_value, str) and 'javascript:' in attr_value.lower():
+                        attrs_to_remove.append(attr_name)
+                    # Clean style attributes (remove expressions and javascript)
+                    elif attr_name.lower() == 'style' and isinstance(attr_value, str):
+                        # Normalize CSS by removing extra whitespace and line breaks
+                        normalized_css = ' '.join(attr_value.split())
+                        
+                        # Parse CSS properties individually for more precise cleaning
+                        css_rules = []
+                        
+                        # Split CSS into individual property declarations
+                        for rule in normalized_css.split(';'):
+                            rule = rule.strip()
+                            if not rule:
+                                continue
+                            
+                            # Check if this rule contains dangerous content
+                            dangerous_patterns = [
+                                r'expression\s*\(',
+                                r'javascript\s*:',
+                                r'vbscript\s*:',
+                                r'@import\s+',
+                                r'behavior\s*:'
+                            ]
+                            
+                            is_dangerous = False
+                            for pattern in dangerous_patterns:
+                                if re.search(pattern, rule, re.IGNORECASE):
+                                    is_dangerous = True
+                                    break
+                            
+                            # Only keep safe CSS rules
+                            if not is_dangerous:
+                                css_rules.append(rule)
+                        
+                        # Update the style attribute based on cleaned CSS
+                        if css_rules:
+                            # We have safe CSS rules, reconstruct the style
+                            cleaned_style = '; '.join(css_rules)
+                            if not cleaned_style.endswith(';'):
+                                cleaned_style += ';'
+                            
+                            # QWebEngineView with Chromium handles all modern CSS natively
+                            
+                            tag.attrs[attr_name] = cleaned_style
+                        else:
+                            # No safe CSS rules remain, remove the style attribute
+                            attrs_to_remove.append(attr_name)
+                
+                # Remove the dangerous attributes
+                for attr_name in attrs_to_remove:
+                    del tag.attrs[attr_name]
+            
+            # Preserve important layout elements and add wrapper for better rendering
+            cleaned_html = str(soup)
+            
+            # Add email wrapper div for better layout control
+            if not cleaned_html.startswith('<div class="email-wrapper">'):
+                cleaned_html = f'<div class="email-wrapper">{cleaned_html}</div>'
+            
+            # Fix common email layout issues
+            # Ensure tables have proper width handling
+            cleaned_html = re.sub(
+                r'<table([^>]*)width=["\']?100%["\']?([^>]*)>',
+                r'<table\1style="width: 100%; max-width: 100%;"\2>',
+                cleaned_html,
+                flags=re.IGNORECASE
+            )
+            
+            # Fix Outlook conditional comments that might break layout
+            cleaned_html = re.sub(r'<!--\[if[^>]*>.*?<!\[endif\]-->', '', cleaned_html, flags=re.DOTALL)
+            
+            return cleaned_html
         
-        # Remove dangerous attributes
-        dangerous_attrs = ['onload', 'onclick', 'onmouseover', 'onerror', 'onchange']
-        for attr in dangerous_attrs:
-            html_content = re.sub(f'{attr}="[^"]*"', '', html_content, flags=re.IGNORECASE)
-            html_content = re.sub(f"{attr}='[^']*'", '', html_content, flags=re.IGNORECASE)
-        
-        return html_content
+        except Exception as e:
+            # If HTML cleaning fails, return a safe version
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"HTML cleaning failed: {e}")
+            
+            # Return minimal safe HTML
+            return f'<div class="email-wrapper"><p>Error displaying email content: {html.escape(str(e))}</p></div>'
+    
+
 
 
 class EmailSearchWidget(QFrame):

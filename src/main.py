@@ -89,13 +89,9 @@ def setup_database() -> sessionmaker:
     logger = get_logger(__name__)
     
     try:
-        # Determine database path (use user data directory)
-        if os.getenv('ADELFA_APPIMAGE'):
-            # For AppImage, store in user's home directory
-            data_dir = Path.home() / ".local" / "share" / "adelfa"
-        else:
-            # For development, store in project directory
-            data_dir = Path(__file__).parent.parent / "data"
+        # Determine database path (always use user data directory)
+        # This ensures consistent data location in both development and production
+        data_dir = Path.home() / ".local" / "share" / "adelfa"
         
         data_dir.mkdir(parents=True, exist_ok=True)
         db_path = data_dir / "adelfa.db"
