@@ -21,7 +21,7 @@ class UIConfig(BaseModel):
     show_preview_pane: bool = Field(default=True, description="Show email preview pane")
     preview_pane_position: str = Field(default="bottom", description="Preview pane position: 'off', 'right', or 'bottom'")
     conversation_view: bool = Field(default=True, description="Enable conversation threading")
-    email_column_widths: Dict[int, int] = Field(default_factory=lambda: {0: 25, 1: 25, 2: 20, 3: 150, 5: 120, 6: 80}, description="Email list column widths")
+    email_column_widths: Dict[str, int] = Field(default_factory=lambda: {"0": 25, "1": 25, "2": 20, "3": 150, "5": 120, "6": 80}, description="Email list column widths")
 
 
 class EmailConfig(BaseModel):
@@ -33,15 +33,20 @@ class EmailConfig(BaseModel):
     html_email: bool = Field(default=True, description="Prefer HTML email format")
     read_receipts: bool = Field(default=False, description="Request read receipts")
     signature: str = Field(default="", description="Default email signature")
+    cache_enabled: bool = Field(default=True, description="Enable email caching")
+    cache_size_mb: int = Field(default=100, description="Maximum cache size in MB")
 
 
 class SecurityConfig(BaseModel):
     """Security and privacy configuration settings."""
     
     remember_passwords: bool = Field(default=True, description="Store passwords in keyring")
-    external_images: bool = Field(default=False, description="Load external images automatically")
+    external_images: str = Field(default="ask", description="Load external images: 'always', 'never', or 'ask'")
+    external_links: str = Field(default="ask", description="Open external links: 'always', 'never', or 'ask'")
     javascript_enabled: bool = Field(default=False, description="Enable JavaScript in emails")
     encryption_enabled: bool = Field(default=True, description="Enable email encryption when available")
+    image_decisions: Dict[str, bool] = Field(default_factory=dict, description="Per-email image loading decisions")
+    link_decisions: Dict[str, bool] = Field(default_factory=dict, description="Per-email link opening decisions")
 
 
 class AppConfig:

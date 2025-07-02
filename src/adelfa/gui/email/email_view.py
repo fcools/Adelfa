@@ -9,10 +9,11 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QTreeWidget, QTreeWidgetItem,
     QTableWidget, QTableWidgetItem, QTextEdit, QToolBar, QComboBox, QLineEdit,
     QPushButton, QLabel, QFrame, QHeaderView, QAbstractItemView, QMenu,
-    QMessageBox, QProgressBar, QStatusBar, QCheckBox, QDateEdit, QGroupBox
+    QMessageBox, QProgressBar, QStatusBar, QCheckBox, QDateEdit, QGroupBox,
+    QSizePolicy
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread, pyqtSlot, QDate
-from PyQt6.QtGui import QIcon, QFont, QAction, QPixmap, QKeySequence
+from PyQt6.QtGui import QIcon, QFont, QAction, QPixmap, QKeySequence, QBrush, QColor
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
 import html
@@ -22,6 +23,7 @@ import locale
 from ...core.email.email_manager import EmailManager, EmailManagerError
 from ...core.email.imap_client import EmailMessage, FolderInfo
 from ...core.email.smtp_client import OutgoingEmail, EmailAddress
+from ...core.cache_manager import EmailCacheManager
 from ...data.models.accounts import Account
 from ...utils.i18n import _
 from .email_composer import EmailComposer
@@ -130,13 +132,16 @@ class ThreadedMessageListWidget(QTableWidget):
     
     def __init__(self):
         super().__init__()
-        self.setup_ui()
         self.threads: Dict[str, ConversationThread] = {}
         self.show_threading = True
         self.expanded_threads: set = set()
         
         # For column width persistence
         self.config = None  # Will be set by EmailView
+        self._is_initializing = True  # Flag to prevent saving during setup
+        
+        self.setup_ui()
+        self._is_initializing = False  # Now ready to save changes
     
     def setup_ui(self):
         """Setup the threaded message list UI."""
@@ -200,20 +205,26 @@ class ThreadedMessageListWidget(QTableWidget):
                 border: none;
             }
             QTableWidget::item:selected {
-                background-color: #0078d4;
+                background-color: #3daee9;
                 color: white;
             }
             QTableWidget::item:hover {
                 background-color: #e5f3ff;
             }
+            QHeaderView::section {
+                background-color: #f0f0f0;
+                padding: 6px;
+                border: 1px solid #d0d0d0;
+                font-weight: bold;
+            }
         """)
         
-        # Connect signals
+        # Connect selection and click handlers
         self.itemSelectionChanged.connect(self._on_selection_changed)
         self.itemDoubleClicked.connect(self._on_double_clicked)
         self.itemClicked.connect(self._on_item_clicked)
         
-        # Connect to column resize signal for persistence
+        # Connect column resize signal for persistence
         header.sectionResized.connect(self._on_column_resized)
     
     def set_config(self, config):
@@ -227,28 +238,38 @@ class ThreadedMessageListWidget(QTableWidget):
             return
             
         saved_widths = self.config.ui.email_column_widths
-        for column, width in saved_widths.items():
-            if 0 <= column < self.columnCount():
-                self.setColumnWidth(column, width)
+        for column_str, width in saved_widths.items():
+            # Convert string key to integer and validate
+            try:
+                column = int(column_str)
+                if isinstance(width, int) and 0 <= column < self.columnCount() and width > 0:
+                    self.setColumnWidth(column, width)
+            except (ValueError, TypeError):
+                continue  # Skip invalid entries
     
     def _save_column_widths(self):
         """Save current column widths to config."""
-        if not self.config:
+        if not self.config or self._is_initializing:
             return
             
         # Save widths for resizable columns only (not stretch column)
         widths = {}
         for column in range(self.columnCount()):
             if column != 4:  # Skip subject column (stretch)
-                widths[column] = self.columnWidth(column)
+                width = self.columnWidth(column)
+                # Only save valid widths (greater than 0) and convert to string keys for TOML
+                if width > 0:
+                    widths[str(column)] = width
         
-        self.config.ui.email_column_widths = widths
-        self.config.save()
+        # Only save if we have valid widths to save
+        if widths:
+            self.config.ui.email_column_widths = widths
+            self.config.save()
     
     def _on_column_resized(self, logical_index: int, old_size: int, new_size: int):
         """Handle column resize event and save to config."""
-        # Only save for resizable columns (not fixed or stretch)
-        if logical_index in [3, 5, 6]:  # From, Date, Size columns
+        # Only save for resizable columns (not fixed or stretch) and valid sizes
+        if logical_index in [3, 5, 6] and new_size > 0 and not self._is_initializing:  # From, Date, Size columns
             self._save_column_widths()
     
     def _extract_display_name(self, email_addr: str) -> str:
@@ -403,7 +424,7 @@ class ThreadedMessageListWidget(QTableWidget):
             font.setBold(True)
             subject_item.setFont(font)
         # Make thread headers slightly different style
-        subject_item.setBackground(self.palette().alternateBase())
+        subject_item.setBackground(QBrush(QColor(240, 240, 240)))
         self.setItem(row, 4, subject_item)
         
         # Latest date
@@ -995,38 +1016,368 @@ class FolderTreeWidget(QTreeWidget):
 
 
 class MessagePreviewWidget(QTextEdit):
-    """Custom text edit for displaying email message content with attachment support."""
+    """Custom text edit for displaying email message content with attachment and image support."""
+    
+    # Signal for requesting image loading decisions
+    image_decision_requested = pyqtSignal(str, str)  # email_hash, message_text
+    
+    # Signal for status messages
+    status_message = pyqtSignal(str, int)  # message, timeout
     
     def __init__(self):
         super().__init__()
         self.setup_ui()
         self.current_message = None
+        self.current_email_hash = None
+        self.cache_manager = None
+        self.config = None
     
     def setup_ui(self):
         """Setup the message preview UI."""
         self.setReadOnly(True)
         self.setMinimumHeight(300)
         
-        # Enable hyperlinks (alternative method for compatibility)
+        # Set proper size policy to fill available space
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        
+        # Configure scrollbars
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        
+        # Enable word wrap for long content
+        self.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        
+        # Configure viewport
+        self.setViewportMargins(0, 0, 0, 0)
+        
+        # Disable automatic external link opening for security
         try:
-            self.setOpenExternalLinks(True)
+            self.setOpenExternalLinks(False)
         except AttributeError:
-            # Fallback for versions where this method is not available
+            # Method not available in this Qt version
+            pass
+        
+        # Connect link clicked signal to our handler
+        try:
+            self.anchorClicked.connect(self._on_link_clicked)
+        except AttributeError:
+            # anchorClicked signal not available in this Qt version
+            # We'll handle this with mousePressEvent override instead
+            pass
+        
+        # Configure document to allow external resources when needed
+        document = self.document()
+        if hasattr(document, 'setDefaultStyleSheet'):
+            document.setDefaultStyleSheet("""
+                img { max-width: 100%; height: auto; }
+                body { font-family: Arial, sans-serif; font-size: 14px; }
+            """)
+        
+        # Set up network access manager for loading external images
+        try:
+            from PyQt6.QtNetwork import QNetworkAccessManager
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if hasattr(app, 'networkAccessManager'):
+                # Use application's network manager if available
+                pass
+            else:
+                # Create our own network manager
+                self.network_manager = QNetworkAccessManager(self)
+        except ImportError:
+            # Network module not available
             pass
     
+    def mousePressEvent(self, event):
+        """Handle mouse press events, including link clicks."""
+        # Check if we clicked on a link
+        cursor = self.cursorForPosition(event.pos())
+        char_format = cursor.charFormat()
+        
+        if char_format.isAnchor():
+            anchor_href = char_format.anchorHref()
+            if anchor_href == "adelfa://load-images":
+                # Handle image loading request
+                self._prompt_for_image_loading()
+                return
+            else:
+                # Handle other links (open externally)
+                from PyQt6.QtGui import QDesktopServices
+                from PyQt6.QtCore import QUrl
+                QDesktopServices.openUrl(QUrl(anchor_href))
+                return
+        
+        # Call parent implementation for normal handling
+        super().mousePressEvent(event)
+    
+    def _on_link_clicked(self, url):
+        """Handle link clicks in the email content with security controls."""
+        from PyQt6.QtCore import QUrl
+        
+        url_str = url.toString() if isinstance(url, QUrl) else str(url)
+        
+        if url_str == "adelfa://load-images":
+            # Handle image loading request
+            self._prompt_for_image_loading()
+        elif url_str == "adelfa://open-links":
+            # Handle link opening request
+            self._prompt_for_link_opening()
+        else:
+            # Handle external links based on security settings
+            self._handle_external_link(url_str)
+    
+    def set_cache_manager(self, cache_manager):
+        """Set the cache manager for image handling."""
+        self.cache_manager = cache_manager
+    
+    def set_config(self, config):
+        """Set the configuration for image loading preferences."""
+        self.config = config
+    
     def show_message(self, message: EmailMessage):
-        """Display an email message with attachment support."""
+        """Display an email message with attachment, image, and link support."""
         self.current_message = message
-        html_content = self._build_message_html(message)
+        self.current_email_hash = self._get_email_hash(message)
+        
+        # Check if we should load images and enable links
+        should_load_images = self._should_load_images()
+        should_enable_links = self._should_enable_links()
+        
+        html_content = self._build_message_html(message, load_images=should_load_images, enable_links=should_enable_links)
         self.setHtml(html_content)
+        
+        # Cache the email if caching is enabled
+        if self.cache_manager and self.config and self.config.email.cache_enabled:
+            self._cache_current_email()
     
     def clear_message(self):
         """Clear the message display."""
         self.current_message = None
+        self.current_email_hash = None
         self.clear()
     
-    def _build_message_html(self, message: EmailMessage) -> str:
-        """Build HTML representation of the message with attachments."""
+    def _get_email_hash(self, message: EmailMessage) -> str:
+        """Generate a unique hash for the current email."""
+        import hashlib
+        content = f"{message.uid}:{message.folder}:{message.headers.message_id}"
+        return hashlib.md5(content.encode()).hexdigest()
+    
+    def _should_load_images(self) -> bool:
+        """Determine if images should be loaded for the current email."""
+        if not self.config or not self.current_email_hash:
+            return False
+        
+        # Check global setting
+        if self.config.security.external_images == "always":
+            return True
+        elif self.config.security.external_images == "never":
+            return False
+        
+        # Check per-email decision (only if user has made a decision)
+        if self.cache_manager:
+            decision = self.cache_manager.get_image_decision(self.current_email_hash)
+            if decision is not None:
+                return decision
+        
+        # If set to "ask", don't load images but show the warning with link
+        # The user will click the link to get the prompt
+        return False
+    
+    def _should_enable_links(self) -> bool:
+        """Determine if links should be enabled for the current email."""
+        if not self.config or not self.current_email_hash:
+            return False
+        
+        # Check global setting
+        if self.config.security.external_links == "always":
+            return True
+        elif self.config.security.external_links == "never":
+            return False
+        
+        # Check per-email decision (only if user has made a decision)
+        if self.cache_manager:
+            decision = self.cache_manager.get_link_decision(self.current_email_hash)
+            if decision is not None:
+                return decision
+        
+        # If set to "ask", don't enable links but show the warning with link
+        # The user will click the link to get the prompt
+        return False
+    
+    def _prompt_for_image_loading(self):
+        """Show a prompt asking user whether to load images."""
+        if not self.current_message:
+            return
+            
+        from PyQt6.QtWidgets import QMessageBox, QPushButton
+        
+        # Create custom message box
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Load Images?")
+        msg_box.setText("This email contains external images.")
+        msg_box.setInformativeText("Do you want to load images for this email?")
+        
+        # Custom buttons
+        load_once_btn = msg_box.addButton("Load Once", QMessageBox.ButtonRole.AcceptRole)
+        always_load_btn = msg_box.addButton("Always Load for This Email", QMessageBox.ButtonRole.AcceptRole)
+        dont_load_btn = msg_box.addButton("Don't Load", QMessageBox.ButtonRole.RejectRole)
+        
+        msg_box.setDefaultButton(dont_load_btn)
+        
+        # Show message box
+        result = msg_box.exec()
+        clicked_button = msg_box.clickedButton()
+        
+        if clicked_button == load_once_btn:
+            # Load images just this time, don't save decision
+            self._reload_with_images(True)
+        elif clicked_button == always_load_btn:
+            # Save decision and load images
+            if self.cache_manager and self.current_email_hash:
+                self.cache_manager.set_image_decision(self.current_email_hash, True)
+                self.status_message.emit("Images will always be loaded for this email", 3000)
+            self._reload_with_images(True)
+        elif clicked_button == dont_load_btn:
+            # Save decision to not load
+            if self.cache_manager and self.current_email_hash:
+                self.cache_manager.set_image_decision(self.current_email_hash, False)
+                self.status_message.emit("Images will be blocked for this email", 3000)
+    
+    def _prompt_for_link_opening(self):
+        """Show a prompt asking user whether to enable link opening."""
+        if not self.current_message:
+            return
+            
+        from PyQt6.QtWidgets import QMessageBox, QPushButton
+        
+        # Create custom message box
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Enable Link Opening?")
+        msg_box.setText("This email contains external links.")
+        msg_box.setInformativeText("Do you want to enable link opening for this email?")
+        
+        # Custom buttons
+        enable_once_btn = msg_box.addButton("Enable Once", QMessageBox.ButtonRole.AcceptRole)
+        always_enable_btn = msg_box.addButton("Always Enable for This Email", QMessageBox.ButtonRole.AcceptRole)
+        dont_enable_btn = msg_box.addButton("Keep Disabled", QMessageBox.ButtonRole.RejectRole)
+        
+        msg_box.setDefaultButton(dont_enable_btn)
+        
+        # Show message box
+        result = msg_box.exec()
+        clicked_button = msg_box.clickedButton()
+        
+        if clicked_button == enable_once_btn:
+            # Enable links just this time, don't save decision
+            self._reload_with_links(True)
+        elif clicked_button == always_enable_btn:
+            # Save decision and enable links
+            if self.cache_manager and self.current_email_hash:
+                self.cache_manager.set_link_decision(self.current_email_hash, True)
+                self.status_message.emit("Links will always be enabled for this email", 3000)
+            self._reload_with_links(True)
+        elif clicked_button == dont_enable_btn:
+            # Save decision to not enable
+            if self.cache_manager and self.current_email_hash:
+                self.cache_manager.set_link_decision(self.current_email_hash, False)
+                self.status_message.emit("Links will remain disabled for this email", 3000)
+    
+    def _reload_with_images(self, load_images: bool):
+        """Reload the current message with or without images."""
+        if self.current_message:
+            if load_images:
+                # Show loading message while downloading images
+                self.status_message.emit("Loading images...", 0)
+            
+            should_enable_links = self._should_enable_links()
+            html_content = self._build_message_html(self.current_message, load_images=load_images, enable_links=should_enable_links)
+            self.setHtml(html_content)
+            
+            if load_images:
+                # Clear loading message
+                self.status_message.emit("Images loaded", 2000)
+    
+    def _reload_with_links(self, enable_links: bool):
+        """Reload the current message with or without links enabled."""
+        if self.current_message:
+            should_load_images = self._should_load_images()
+            html_content = self._build_message_html(self.current_message, load_images=should_load_images, enable_links=enable_links)
+            self.setHtml(html_content)
+    
+    def _handle_external_link(self, url_str: str):
+        """Handle clicking on external links based on security settings."""
+        if not self.config or not self.current_email_hash:
+            # No config, default to blocking
+            self.status_message.emit("External links are disabled for security", 3000)
+            return
+        
+        # Check global setting
+        if self.config.security.external_links == "always":
+            self._open_external_link(url_str)
+            return
+        elif self.config.security.external_links == "never":
+            self.status_message.emit("External links are disabled by security settings", 3000)
+            return
+        
+        # Check per-email decision (only if user has made a decision)
+        if self.cache_manager:
+            decision = self.cache_manager.get_link_decision(self.current_email_hash)
+            if decision is True:
+                self._open_external_link(url_str)
+                return
+            elif decision is False:
+                self.status_message.emit("External links are disabled for this email", 3000)
+                return
+        
+        # If set to "ask" and no decision made, show warning message
+        self.status_message.emit("External links are disabled for security. Use the link above to enable them.", 3000)
+    
+    def _open_external_link(self, url_str: str):
+        """Safely open an external link."""
+        try:
+            from PyQt6.QtGui import QDesktopServices
+            from PyQt6.QtCore import QUrl
+            
+            # Validate URL for security
+            if url_str.startswith(('http://', 'https://', 'mailto:')):
+                QDesktopServices.openUrl(QUrl(url_str))
+                self.status_message.emit(f"Opened: {url_str}", 2000)
+            else:
+                self.status_message.emit("Link blocked: Only HTTP, HTTPS, and mailto links are allowed", 5000)
+        except Exception as e:
+            self.status_message.emit(f"Failed to open link: {e}", 5000)
+    
+    def _cache_current_email(self):
+        """Cache the current email data."""
+        if not self.current_message or not self.cache_manager:
+            return
+        
+        try:
+            # Convert message to dict for caching
+            email_data = {
+                'uid': self.current_message.uid,
+                'account_id': getattr(self.current_message, 'account_id', 0),  # Add if available
+                'folder': self.current_message.folder,
+                'subject': self.current_message.headers.subject,
+                'from_addr': self.current_message.headers.from_addr,
+                'date': self.current_message.headers.date.isoformat() if self.current_message.headers.date else '',
+                'size': self.current_message.size,
+                'html_content': getattr(self.current_message, 'html_content', None),
+                'text_content': getattr(self.current_message, 'text_content', None),
+                'attachments': self.current_message.attachments or [],
+                'is_read': getattr(self.current_message, 'is_read', True),
+                'is_flagged': getattr(self.current_message, 'is_flagged', False)
+            }
+            
+            self.cache_manager.cache_email(email_data)
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to cache email: {e}")
+    
+    def _build_message_html(self, message: EmailMessage, load_images: bool = False, enable_links: bool = False) -> str:
+        """Build HTML representation of the message with attachments, image, and link support."""
         html_parts = []
         
         # Message headers
@@ -1051,6 +1402,33 @@ class MessagePreviewWidget(QTextEdit):
         html_parts.append(f"<p><strong>Subject:</strong> {html.escape(message.headers.subject or '(No Subject)')}</p>")
         html_parts.append(f"<p><strong>Date:</strong> {message.headers.date.strftime('%A, %B %d, %Y at %I:%M %p')}</p>")
         
+        # Show privacy notices for blocked content
+        has_images = self._contains_images(message)
+        has_links = self._contains_links(message)
+        
+        if (not load_images and has_images) or (not enable_links and has_links):
+            html_parts.append("""
+            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 8px; margin: 5px 0; border-radius: 4px;">
+            """)
+            
+            if not load_images and has_images:
+                html_parts.append("""
+                <p style="margin: 0 0 5px 0; color: #856404;">
+                    🖼️ <strong>Images blocked for privacy.</strong> 
+                    <a href="adelfa://load-images" style="color: #0066cc; text-decoration: underline;">Click here to load images</a>
+                </p>
+                """)
+            
+            if not enable_links and has_links:
+                html_parts.append("""
+                <p style="margin: 0; color: #856404;">
+                    🔗 <strong>External links disabled for security.</strong> 
+                    <a href="adelfa://open-links" style="color: #0066cc; text-decoration: underline;">Click here to enable links</a>
+                </p>
+                """)
+            
+            html_parts.append("</div>")
+        
         # Attachments section
         if message.attachments:
             html_parts.append(self._build_attachments_html(message.attachments))
@@ -1060,20 +1438,257 @@ class MessagePreviewWidget(QTextEdit):
         # Message body
         html_parts.append('<div style="margin-top: 15px;">')
         if message.html_content:
-            # Clean HTML content for security
-            cleaned_html = self._clean_html_content(message.html_content)
+            # Clean and process HTML content
+            cleaned_html = self._process_html_content(message.html_content, load_images, enable_links)
             html_parts.append(cleaned_html)
         elif message.text_content:
-            # Convert plain text to HTML
-            text_lines = message.text_content.split('\n')
-            for line in text_lines:
-                html_parts.append(f"<p>{html.escape(line)}</p>")
+            # Convert plain text to HTML, handling links if enabled
+            processed_text = self._process_text_content(message.text_content, enable_links)
+            html_parts.append(processed_text)
         else:
             html_parts.append("<p><em>No content to display</em></p>")
         
         html_parts.append('</div>')
         
         return ''.join(html_parts)
+    
+    def _contains_images(self, message: EmailMessage) -> bool:
+        """Check if the email contains images."""
+        if not message.html_content:
+            return False
+        
+        import re
+        # Look for img tags or CSS background images
+        img_pattern = r'<img[^>]+src=|background-image\s*:\s*url\('
+        return bool(re.search(img_pattern, message.html_content, re.IGNORECASE))
+    
+    def _contains_links(self, message: EmailMessage) -> bool:
+        """Check if the email contains external links."""
+        import re
+        
+        # Check HTML content for links
+        if message.html_content:
+            # Look for anchor tags with http/https links
+            link_pattern = r'<a[^>]+href\s*=\s*["\']https?://'
+            if re.search(link_pattern, message.html_content, re.IGNORECASE):
+                return True
+        
+        # Check plain text content for URLs
+        if message.text_content:
+            url_pattern = r'https?://[^\s]+'
+            if re.search(url_pattern, message.text_content):
+                return True
+        
+        return False
+    
+    def _process_html_content(self, html_content: str, load_images: bool, enable_links: bool) -> str:
+        """Process HTML content, handling images and links according to user preferences."""
+        import re
+        
+        # Clean HTML for security
+        cleaned_html = self._clean_html_content(html_content)
+        
+        if not load_images:
+            # Replace image sources with placeholder
+            cleaned_html = re.sub(
+                r'(<img[^>]+)src=(["\'])[^"\']*\2([^>]*>)',
+                r'\1src=\2data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNSA3SDVWMTNIMTVWN1oiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPHBhdGggZD0iTTcgOUw5IDExTDEzIDciIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg==\2 alt="[Image blocked]" title="Image blocked for privacy"\3',
+                cleaned_html,
+                flags=re.IGNORECASE
+            )
+            
+            # Remove CSS background images
+            cleaned_html = re.sub(
+                r'background-image\s*:\s*url\([^)]+\)',
+                'background-image: none',
+                cleaned_html,
+                flags=re.IGNORECASE
+            )
+        else:
+            # Load images by downloading them and converting to data URLs
+            cleaned_html = self._load_external_images(cleaned_html)
+        
+        if not enable_links:
+            # Disable external links by removing href attributes for http/https links
+            cleaned_html = re.sub(
+                r'(<a[^>]+)href\s*=\s*(["\'])https?://[^"\']*\2([^>]*>)',
+                r'\1style="color: #999; text-decoration: line-through; cursor: default;" title="External link disabled for security"\3',
+                cleaned_html,
+                flags=re.IGNORECASE
+            )
+        
+        return cleaned_html
+    
+    def _load_external_images(self, html_content: str) -> str:
+        """Download external images and convert them to data URLs for display."""
+        import re
+        import requests
+        import base64
+        from urllib.parse import urlparse
+        
+        def replace_image_src(match):
+            """Replace external image URLs with data URLs."""
+            prefix = match.group(1)  # Everything before src=
+            quote = match.group(2)  # Quote character (' or ")
+            url = match.group(3)     # The image URL
+            suffix = match.group(4)  # Everything after the URL
+            
+            # Skip if already a data URL
+            if url.startswith('data:'):
+                return match.group(0)
+            
+            # Check cache first
+            if self.cache_manager and self.current_email_hash:
+                cached_image = self.cache_manager.get_cached_image(url, self.current_email_hash)
+                if cached_image:
+                    content_type, image_data = cached_image
+                    base64_data = base64.b64encode(image_data).decode('ascii')
+                    data_url = f"data:{content_type};base64,{base64_data}"
+                    return f'{prefix}src={quote}{data_url}{quote}{suffix}'
+            
+            try:
+                # Validate URL
+                parsed = urlparse(url)
+                if not parsed.scheme or not parsed.netloc:
+                    return match.group(0)
+                
+                # Download the image with timeout and size limits
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+                
+                response = requests.get(url, headers=headers, timeout=10, stream=True)
+                response.raise_for_status()
+                
+                # Check content type
+                content_type = response.headers.get('content-type', '').lower()
+                if not content_type.startswith('image/'):
+                    return match.group(0)
+                
+                # Check file size (limit to 5MB)
+                content_length = response.headers.get('content-length')
+                if content_length and int(content_length) > 5 * 1024 * 1024:
+                    return match.group(0)
+                
+                # Download the image data
+                image_data = b''
+                downloaded_size = 0
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        downloaded_size += len(chunk)
+                        if downloaded_size > 5 * 1024 * 1024:  # 5MB limit
+                            break
+                        image_data += chunk
+                
+                if not image_data:
+                    return match.group(0)
+                
+                # Convert to base64 data URL
+                base64_data = base64.b64encode(image_data).decode('ascii')
+                data_url = f"data:{content_type};base64,{base64_data}"
+                
+                # Cache the image if cache manager is available
+                if self.cache_manager and self.current_email_hash:
+                    self.cache_manager.cache_image(url, self.current_email_hash, content_type, image_data)
+                
+                return f'{prefix}src={quote}{data_url}{quote}{suffix}'
+                
+            except Exception as e:
+                # Log error and return original
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to load image {url}: {e}")
+                
+                # Return with placeholder on error
+                placeholder_url = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkY2MzYzIi8+CjxwYXRoIGQ9Ik0xMCAxNEw2IDEwSDhWNkgxMlYxMEgxNEwxMCAxNFoiIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg=="
+                return f'{prefix}src={quote}{placeholder_url}{quote} alt="[Image failed to load]" title="Failed to load: {url}"{suffix}'
+        
+        # Use regex to find and replace all image sources
+        pattern = r'(<img[^>]+)src=(["\'])([^"\']+)\2([^>]*>)'
+        return re.sub(pattern, replace_image_src, html_content, flags=re.IGNORECASE)
+    
+    def _process_text_content(self, text_content: str, enable_links: bool) -> str:
+        """Process plain text content, converting to HTML and handling links."""
+        import re
+        
+        text_lines = text_content.split('\n')
+        html_lines = []
+        
+        for line in text_lines:
+            escaped_line = html.escape(line)
+            
+            if enable_links:
+                # Convert URLs to clickable links
+                url_pattern = r'(https?://[^\s]+)'
+                escaped_line = re.sub(url_pattern, r'<a href="\1" style="color: #0066cc; text-decoration: underline;">\1</a>', escaped_line)
+            else:
+                # Style URLs as disabled links
+                url_pattern = r'(https?://[^\s]+)'
+                escaped_line = re.sub(url_pattern, r'<span style="color: #999; text-decoration: line-through;" title="External link disabled for security">\1</span>', escaped_line)
+            
+            html_lines.append(f"<p>{escaped_line}</p>")
+        
+        return ''.join(html_lines)
+    
+    def download_attachment(self, attachment_index: int):
+        """Download attachment to user's computer."""
+        if not self.current_message or not self.current_message.attachments:
+            return
+        
+        if attachment_index >= len(self.current_message.attachments):
+            return
+        
+        try:
+            from PyQt6.QtWidgets import QFileDialog
+            import os
+            
+            attachment = self.current_message.attachments[attachment_index]
+            filename = attachment.get('filename', f'attachment_{attachment_index}')
+            
+            # Ask user where to save the file
+            save_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save Attachment",
+                filename,
+                "All Files (*.*)"
+            )
+            
+            if save_path:
+                # Get attachment content from email manager
+                content = self._get_attachment_content(attachment_index)
+                if content:
+                    with open(save_path, 'wb') as f:
+                        f.write(content)
+                    
+                    QMessageBox.information(
+                        self,
+                        "Download Complete",
+                        f"Attachment saved to:\n{save_path}"
+                    )
+                else:
+                    QMessageBox.warning(
+                        self,
+                        "Download Failed",
+                        "Failed to retrieve attachment content"
+                    )
+                    
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Download Error",
+                f"Failed to download attachment: {e}"
+            )
+    
+    def _get_attachment_content(self, attachment_index: int) -> Optional[bytes]:
+        """Get attachment content from the email (placeholder implementation)."""
+        # This would need to be implemented in the email manager
+        # to retrieve the actual attachment content from the IMAP server
+        try:
+            if self.current_message and hasattr(self.current_message, 'get_attachment_content'):
+                return self.current_message.get_attachment_content(attachment_index)
+        except Exception:
+            pass
+        return None
     
     def _build_attachments_html(self, attachments) -> str:
         """Build HTML for attachment list with preview and download options."""
@@ -1146,66 +1761,6 @@ class MessagePreviewWidget(QTextEdit):
             html_content = re.sub(f"{attr}='[^']*'", '', html_content, flags=re.IGNORECASE)
         
         return html_content
-    
-    def download_attachment(self, attachment_index: int):
-        """Download attachment to user's computer."""
-        if not self.current_message or not self.current_message.attachments:
-            return
-        
-        if attachment_index >= len(self.current_message.attachments):
-            return
-        
-        try:
-            from PyQt6.QtWidgets import QFileDialog
-            import os
-            
-            attachment = self.current_message.attachments[attachment_index]
-            filename = attachment.get('filename', f'attachment_{attachment_index}')
-            
-            # Ask user where to save the file
-            save_path, _ = QFileDialog.getSaveFileName(
-                self,
-                "Save Attachment",
-                filename,
-                "All Files (*.*)"
-            )
-            
-            if save_path:
-                # Get attachment content from email manager
-                content = self._get_attachment_content(attachment_index)
-                if content:
-                    with open(save_path, 'wb') as f:
-                        f.write(content)
-                    
-                    QMessageBox.information(
-                        self,
-                        "Download Complete",
-                        f"Attachment saved to:\n{save_path}"
-                    )
-                else:
-                    QMessageBox.warning(
-                        self,
-                        "Download Failed",
-                        "Failed to retrieve attachment content"
-                    )
-                    
-        except Exception as e:
-            QMessageBox.critical(
-                self,
-                "Download Error",
-                f"Failed to download attachment: {e}"
-            )
-    
-    def _get_attachment_content(self, attachment_index: int) -> Optional[bytes]:
-        """Get attachment content from the email (placeholder implementation)."""
-        # This would need to be implemented in the email manager
-        # to retrieve the actual attachment content from the IMAP server
-        try:
-            if self.current_message and hasattr(self.current_message, 'get_attachment_content'):
-                return self.current_message.get_attachment_content(attachment_index)
-        except Exception:
-            pass
-        return None
 
 
 class EmailSearchWidget(QFrame):
@@ -1329,14 +1884,24 @@ class EmailView(QWidget):
     status_message = pyqtSignal(str, int)  # message, timeout
     
     def __init__(self, email_manager: EmailManager, account_manager=None):
+        """
+        Initialize the email view.
+        
+        Args:
+            email_manager: Email manager instance
+            account_manager: Account manager instance (optional)
+        """
         super().__init__()
         self.email_manager = email_manager
         self.account_manager = account_manager
         self.current_folder = None
         self.current_account_id = None
-        self.accounts = []
+        self.accounts = []  # Store loaded accounts
+        self.config = None  # Will be set later
+        self.cache_manager = None  # Will be initialized when config is set
         
         self.setup_ui()
+        self.setup_toolbar()
         self.setup_connections()
         
         # Initialize preview position to default
@@ -1456,11 +2021,21 @@ class EmailView(QWidget):
         self.folder_tree.folder_selected.connect(self.on_folder_selected)
         self.message_list.message_selected.connect(self.on_message_selected)
         self.message_list.message_double_clicked.connect(self.on_message_double_clicked)
+        # Connect message preview status messages to main view
+        self.message_preview.status_message.connect(self.status_message.emit)
     
     def set_config(self, config):
-        """Set the app config for column width persistence."""
+        """Set the app config for column width persistence and initialize cache manager."""
         self.config = config
         self.message_list.set_config(config)
+        
+        # Initialize cache manager
+        self.cache_manager = EmailCacheManager(config)
+        
+        # Configure message preview with cache manager and config
+        self.message_preview.set_cache_manager(self.cache_manager)
+        self.message_preview.set_config(config)
+        
         # Load preview pane position from config
         self._load_preview_pane_position()
     
