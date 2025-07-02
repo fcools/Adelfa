@@ -872,20 +872,20 @@ class AccountManagerDialog(QDialog):
         right_layout.addWidget(self.details_group)
         
         # Quick actions
-        actions_group = QGroupBox("Quick Actions")
+        actions_group = QGroupBox(_("email.account_manager.groups.quick_actions"))
         actions_layout = QVBoxLayout(actions_group)
         
-        self.test_connection_btn = QPushButton("Test Connection")
+        self.test_connection_btn = QPushButton(_("email.account_manager.buttons.test_connection"))
         self.test_connection_btn.clicked.connect(self.test_connection)
         self.test_connection_btn.setEnabled(False)
         actions_layout.addWidget(self.test_connection_btn)
         
-        self.verify_credentials_btn = QPushButton("Verify Credentials")
+        self.verify_credentials_btn = QPushButton(_("email.account_manager.buttons.verify_credentials"))
         self.verify_credentials_btn.clicked.connect(self.verify_credentials)
         self.verify_credentials_btn.setEnabled(False)
         actions_layout.addWidget(self.verify_credentials_btn)
         
-        self.set_default_btn = QPushButton("Set as Default")
+        self.set_default_btn = QPushButton(_("email.account_manager.buttons.set_default"))
         self.set_default_btn.clicked.connect(self.set_default_account)
         self.set_default_btn.setEnabled(False)
         actions_layout.addWidget(self.set_default_btn)
@@ -902,11 +902,11 @@ class AccountManagerDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         
-        self.refresh_btn = QPushButton("Refresh")
+        self.refresh_btn = QPushButton(_("email.account_manager.buttons.refresh"))
         self.refresh_btn.clicked.connect(self.load_accounts)
         button_layout.addWidget(self.refresh_btn)
         
-        self.close_btn = QPushButton("Close")
+        self.close_btn = QPushButton(_("email.account_manager.buttons.close"))
         self.close_btn.clicked.connect(self.accept)
         button_layout.addWidget(self.close_btn)
         
@@ -939,7 +939,7 @@ class AccountManagerDialog(QDialog):
                 self.account_list.addItem(item)
                 
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to load accounts: {e}")
+            QMessageBox.warning(self, _("email.account_manager.messages.error"), _("email.account_manager.messages.load_failed").format(error=str(e)))
             logger.error(f"Failed to load accounts: {e}")
             
     def on_account_selected(self, current, previous):
@@ -987,7 +987,7 @@ class AccountManagerDialog(QDialog):
         if account.last_sync:
             self.details_last_sync.setText(account.last_sync.strftime("%Y-%m-%d %H:%M:%S"))
         else:
-            self.details_last_sync.setText("Never")
+            self.details_last_sync.setText(_("email.account_manager.labels.never"))
             
         # Check stored credentials
         credential_manager = get_credential_manager()
@@ -1062,9 +1062,8 @@ class AccountManagerDialog(QDialog):
         
         reply = QMessageBox.question(
             self,
-            "Delete Account",
-            f"Are you sure you want to delete the account '{account.name}'?\n\n"
-            "This will permanently remove the account and all stored credentials.",
+            _("email.account_manager.buttons.delete_account"),
+            _("email.account_manager.messages.delete_confirmation").format(name=account.name),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
@@ -1075,12 +1074,12 @@ class AccountManagerDialog(QDialog):
                 if success:
                     self.load_accounts()
                     self.accounts_changed.emit()
-                    QMessageBox.information(self, "Success", "Account deleted successfully!")
+                    QMessageBox.information(self, _("email.account_manager.messages.success"), _("email.account_manager.messages.account_deleted"))
                 else:
-                    QMessageBox.warning(self, "Error", "Failed to delete account.")
+                    QMessageBox.warning(self, _("email.account_manager.messages.error"), _("email.account_manager.messages.delete_failed"))
                     
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to delete account: {e}")
+                QMessageBox.critical(self, _("email.account_manager.messages.error"), _("email.account_manager.messages.delete_error").format(error=str(e)))
                 
     def test_connection(self):
         """Test connection for selected account."""
@@ -1146,9 +1145,9 @@ class AccountManagerDialog(QDialog):
         
         # Create verification dialog
         verify_dialog = QDialog(self)
-        verify_dialog.setWindowTitle("Credential Verification")
+        verify_dialog.setWindowTitle(_("email.account_manager.titles.credential_verification"))
         verify_dialog.setModal(True)
-        verify_dialog.resize(400, 300)
+        verify_dialog.resize(500, 400)
         
         layout = QVBoxLayout(verify_dialog)
         

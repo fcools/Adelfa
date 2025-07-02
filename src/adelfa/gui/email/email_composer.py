@@ -87,7 +87,7 @@ class AttachmentListWidget(QListWidget):
         try:
             file_path = Path(filepath)
             if not file_path.exists():
-                QMessageBox.warning(self, "Error", f"File not found: {filepath}")
+                QMessageBox.warning(self, _("email.composer.errors.error"), _("email.composer.errors.file_not_found").format(filepath=filepath))
                 return
             
             # Create attachment
@@ -103,8 +103,10 @@ class AttachmentListWidget(QListWidget):
             self.addItem(item)
             self.attachments[filepath] = attachment
             
+        except FileNotFoundError:
+            QMessageBox.warning(self, _("email.composer.errors.error"), _("email.composer.errors.file_not_found").format(filepath=filepath))
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to add attachment: {e}")
+            QMessageBox.warning(self, _("email.composer.errors.error"), _("email.composer.errors.failed_attachment").format(error=str(e)))
     
     def remove_selected_attachment(self):
         """Remove the selected attachment."""
@@ -170,9 +172,9 @@ class EmailComposer(QDialog):
     
     def setup_ui(self):
         """Setup the composer UI."""
-        self.setWindowTitle("Compose Email")
+        self.setWindowTitle(_("email.composer.window_title"))
         self.setMinimumSize(800, 600)
-        self.resize(1000, 700)
+        self.resize(900, 700)
         
         layout = QVBoxLayout(self)
         
@@ -196,20 +198,25 @@ class EmailComposer(QDialog):
         
         # Attachment area
         attachment_frame = QFrame()
+        attachment_frame.setFrameStyle(QFrame.Shape.StyledPanel)
         attachment_layout = QVBoxLayout(attachment_frame)
-        attachment_layout.setContentsMargins(5, 5, 5, 5)
         
-        attachment_label = QLabel("Attachments:")
-        attachment_layout.addWidget(attachment_label)
+        attachment_header_layout = QHBoxLayout()
+        attachment_label = QLabel(_("email.composer.labels.attachments"))
+        attachment_label.setFont(QFont("", 10, QFont.Weight.Bold))
+        attachment_header_layout.addWidget(attachment_label)
+        
+        self.add_attachment_button = QPushButton(_("email.composer.add_file"))
+        self.add_attachment_button.clicked.connect(self.add_attachment)
+        attachment_header_layout.addWidget(self.add_attachment_button)
+        attachment_header_layout.addStretch()
+        
+        attachment_layout.addLayout(attachment_header_layout)
         
         self.attachment_list = AttachmentListWidget()
         attachment_layout.addWidget(self.attachment_list)
         
         attachment_buttons = QHBoxLayout()
-        
-        add_attachment_btn = QPushButton("Add File...")
-        add_attachment_btn.clicked.connect(self.add_attachment)
-        attachment_buttons.addWidget(add_attachment_btn)
         
         remove_attachment_btn = QPushButton("Remove")
         remove_attachment_btn.clicked.connect(self.attachment_list.remove_selected_attachment)
@@ -228,14 +235,14 @@ class EmailComposer(QDialog):
         # Button area
         button_layout = QHBoxLayout()
         
-        self.send_button = QPushButton("Send")
-        self.send_button.setDefault(True)
+        self.send_button = QPushButton(_("email.composer.send_button"))
         self.send_button.clicked.connect(self.send_email)
+        self.send_button.setDefault(True)
         button_layout.addWidget(self.send_button)
         
-        save_draft_button = QPushButton("Save Draft")
-        save_draft_button.clicked.connect(self.save_draft)
-        button_layout.addWidget(save_draft_button)
+        self.save_draft_button = QPushButton(_("email.composer.save_draft"))
+        self.save_draft_button.clicked.connect(self.save_draft)
+        button_layout.addWidget(self.save_draft_button)
         
         button_layout.addStretch()
         
@@ -263,28 +270,28 @@ class EmailComposer(QDialog):
         header_layout.addWidget(self.from_combo, 0, 1)
         
         # To field
-        header_layout.addWidget(QLabel("To:"), 1, 0)
+        header_layout.addWidget(QLabel(_("email.composer.labels.to")), 1, 0)
         self.to_edit = QLineEdit()
-        self.to_edit.setPlaceholderText("Enter recipients separated by commas")
-        header_layout.addWidget(self.to_edit, 1, 1)
+        self.to_edit.setPlaceholderText(_("email.composer.placeholders.to"))
+        header_layout.addRow(_("email.composer.labels.to"), self.to_edit)
         
         # CC field
-        header_layout.addWidget(QLabel("Cc:"), 2, 0)
+        header_layout.addWidget(QLabel(_("email.composer.labels.cc")), 2, 0)
         self.cc_edit = QLineEdit()
-        self.cc_edit.setPlaceholderText("Carbon copy recipients")
-        header_layout.addWidget(self.cc_edit, 2, 1)
+        self.cc_edit.setPlaceholderText(_("email.composer.placeholders.cc"))
+        header_layout.addRow(_("email.composer.labels.cc"), self.cc_edit)
         
         # BCC field
-        header_layout.addWidget(QLabel("Bcc:"), 3, 0)
+        header_layout.addWidget(QLabel(_("email.composer.labels.bcc")), 3, 0)
         self.bcc_edit = QLineEdit()
-        self.bcc_edit.setPlaceholderText("Blind carbon copy recipients")
-        header_layout.addWidget(self.bcc_edit, 3, 1)
+        self.bcc_edit.setPlaceholderText(_("email.composer.placeholders.bcc"))
+        header_layout.addRow(_("email.composer.labels.bcc"), self.bcc_edit)
         
         # Subject field
-        header_layout.addWidget(QLabel("Subject:"), 4, 0)
+        header_layout.addWidget(QLabel(_("email.composer.labels.subject")), 4, 0)
         self.subject_edit = QLineEdit()
-        self.subject_edit.setPlaceholderText("Enter email subject")
-        header_layout.addWidget(self.subject_edit, 4, 1)
+        self.subject_edit.setPlaceholderText(_("email.composer.placeholders.subject"))
+        header_layout.addRow(_("email.composer.labels.subject"), self.subject_edit)
         
         # Options
         options_layout = QHBoxLayout()
@@ -309,7 +316,7 @@ class EmailComposer(QDialog):
         font_family_combo.addItems(font_families)
         font_family_combo.setCurrentText("Segoe UI")
         font_family_combo.currentTextChanged.connect(self.change_font_family)
-        self.toolbar.addWidget(QLabel("Font:"))
+        self.toolbar.addWidget(QLabel(_("email.composer.labels.font")))
         self.toolbar.addWidget(font_family_combo)
         
         # Font size
@@ -489,31 +496,41 @@ class EmailComposer(QDialog):
     def send_email(self):
         """Send the email."""
         try:
-            # Validate fields
+            # Validate required fields
             if not self.subject_edit.text().strip():
-                QMessageBox.warning(self, "Error", "Please enter a subject.")
+                QMessageBox.warning(self, _("email.composer.errors.validation_error"), _("email.composer.errors.enter_subject"))
                 return
             
+            recipients = self.to_edit.text().strip()
+            if not recipients:
+                QMessageBox.warning(self, _("email.composer.errors.validation_error"), _("email.composer.errors.enter_recipient"))
+                return
+            
+            # Get selected account
+            account = self.from_combo.currentData()
+            if not account:
+                QMessageBox.warning(self, _("email.composer.errors.validation_error"), _("email.composer.errors.no_account"))
+                return
+            
+            # Disable send button and show progress
+            self.send_button.setEnabled(False)
+            self.send_button.setText(_("email.composer.sending_button"))
+            
+            # Validate email addresses
             to_addresses = self.validate_email_addresses(self.to_edit.text())
             if not to_addresses:
-                QMessageBox.warning(self, "Error", "Please enter at least one recipient.")
+                QMessageBox.warning(self, _("email.composer.errors.validation_error"), _("email.composer.errors.enter_recipient"))
                 return
             
             cc_addresses = self.validate_email_addresses(self.cc_edit.text())
             bcc_addresses = self.validate_email_addresses(self.bcc_edit.text())
             
-            # Get selected account
-            selected_account = self.from_combo.currentData()
-            if not selected_account:
-                QMessageBox.warning(self, "Error", "No account selected.")
-                return
-            
             # Create outgoing email
             email = OutgoingEmail(
                 subject=self.subject_edit.text(),
                 from_addr=EmailAddress(
-                    email=selected_account.email_address,
-                    name=selected_account.display_name
+                    email=account.email_address,
+                    name=account.display_name
                 ),
                 to_addrs=to_addresses,
                 cc_addrs=cc_addresses,
@@ -525,32 +542,27 @@ class EmailComposer(QDialog):
                 request_receipt=self.request_receipt_check.isChecked()
             )
             
-            # Disable send button and show progress
-            self.send_button.setEnabled(False)
-            self.send_button.setText("Sending...")
-            self.status_bar.showMessage("Sending email...")
-            
             # Send email
-            success = self.email_manager.send_email(email, selected_account.id)
+            success = self.email_manager.send_email(email, account.id)
             
             if success:
-                self.status_bar.showMessage("Email sent successfully!")
-                QMessageBox.information(self, "Success", "Email sent successfully!")
+                self.status_bar.showMessage(_("email.composer.errors.sent_successfully"))
+                QMessageBox.information(self, _("email.composer.errors.success"), _("email.composer.errors.sent_successfully"))
                 self.email_sent.emit(True)
                 self.accept()
             else:
-                self.status_bar.showMessage("Failed to send email")
-                QMessageBox.warning(self, "Error", "Failed to send email. Please check your connection and try again.")
+                self.status_bar.showMessage(_("email.composer.errors.send_failed"))
+                QMessageBox.warning(self, _("email.composer.errors.error"), _("email.composer.errors.send_failed"))
                 self.email_sent.emit(False)
             
         except ValueError as e:
-            QMessageBox.warning(self, "Error", str(e))
+            QMessageBox.warning(self, _("email.composer.errors.validation_error"), str(e))
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"An error occurred while sending: {e}")
+            QMessageBox.critical(self, _("email.composer.errors.error"), _("email.composer.errors.send_error").format(error=str(e)))
             self.email_sent.emit(False)
         finally:
             self.send_button.setEnabled(True)
-            self.send_button.setText("Send")
+            self.send_button.setText(_("email.composer.send_button"))
     
     def save_draft(self):
         """Save email as draft."""
@@ -574,8 +586,8 @@ class EmailComposer(QDialog):
             
             reply = QMessageBox.question(
                 self,
-                "Unsaved Changes",
-                "You have unsaved changes. Do you want to save as draft before closing?",
+                _("email.composer.dialogs.unsaved_changes"),
+                _("email.composer.dialogs.unsaved_message"),
                 QMessageBox.StandardButton.Save | 
                 QMessageBox.StandardButton.Discard | 
                 QMessageBox.StandardButton.Cancel

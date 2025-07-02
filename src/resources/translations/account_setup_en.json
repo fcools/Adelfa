@@ -8,6 +8,287 @@
       "database_failed": "Failed to initialize database:\n{error}\n\nThe application will run with limited functionality.",
       "fatal_error": "Fatal Error",
       "startup_failed": "Adelfa failed to start:\n{error}"
+    },
+    "main_window": {
+      "title": "Adelfa Personal Information Manager",
+      "title_with_module": "Adelfa Personal Information Manager - {module}",
+      "modules": {
+        "email": "Email",
+        "calendar": "Calendar", 
+        "contacts": "Contacts",
+        "tasks": "Tasks",
+        "notes": "Notes"
+      },
+      "folders": "Folders",
+      "placeholders": {
+        "select_folder": "Select a folder to view messages",
+        "select_message": "Select a message to preview..."
+      },
+      "status": {
+        "connecting": "Connecting...",
+        "connecting_accounts": "Connecting to email accounts...",
+        "connected": "Connected",
+        "connection_failed": "Connection failed",
+        "not_connected": "Not connected",
+        "refreshing": "Refreshing email...",
+        "account_added": "Account '{name}' added",
+        "account_settings_updated": "Account settings updated",
+        "email_connected": "Email accounts connected successfully",
+        "email_setup_failed": "Email setup failed: {error}",
+        "email_sent": "Email sent successfully!",
+        "email_send_failed": "Failed to send email",
+        "app_version": "Adelfa Personal Information Manager v0.1.0-dev"
+      },
+      "dialogs": {
+        "no_accounts_title": "No Accounts",
+        "no_accounts_message": "Please set up an email account first.",
+        "account_setup_error": "Account Setup Error",
+        "account_setup_failed": "Failed to set up account: {error}",
+        "feature_unavailable": "Feature Unavailable",
+        "account_management_unavailable": "Account management is not available. Database connection required.",
+        "account_manager_error": "Account Manager Error",
+        "account_manager_failed": "Failed to open account manager: {error}",
+        "update_error": "Update Error",
+        "account_changes_failed": "Failed to apply account changes: {error}"
+      }
+    },
+    "menus": {
+      "file": "File",
+      "new": "New",
+      "email": "Email",
+      "calendar_event": "Calendar Event",
+      "contact": "Contact",
+      "task": "Task",
+      "note": "Note",
+      "import_export": "Import/Export",
+      "import_pst": "Import Outlook PST...",
+      "import_ics": "Import Calendar (ICS)...",
+      "import_vcf": "Import Contacts (vCard)...",
+      "export_calendar": "Export Calendar...",
+      "export_contacts": "Export Contacts...",
+      "add_account": "Add Account...",
+      "account_manager": "Account Manager...",
+      "account_settings": "Account Settings...",
+      "exit": "Exit",
+      "edit": "Edit",
+      "undo": "Undo",
+      "redo": "Redo",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "find": "Find...",
+      "preferences": "Preferences...",
+      "view": "View",
+      "preview_pane": "Preview Pane",
+      "off": "Off",
+      "right": "Right",
+      "bottom": "Bottom",
+      "tools": "Tools",
+      "rules_filters": "Rules and Filters...",
+      "signatures": "Signatures...",
+      "export_data": "Export Data...",
+      "cleanup_tools": "Cleanup Tools...",
+      "help": "Help",
+      "check_updates": "Check for Updates...",
+      "about": "About Adelfa"
+    },
+    "email": {
+      "composer": {
+        "window_title": "Compose Email",
+        "send_button": "Send",
+        "sending_button": "Sending...",
+        "add_file": "Add File...",
+        "sending": "Sending...",
+        "sending_status": "Sending email...",
+        "show_formatting": "Show Formatting",
+        "hide_formatting": "Hide Formatting",
+        "save_draft": "Save Draft",
+        "labels": {
+          "font": "Font:",
+          "to": "To:",
+          "cc": "CC:",
+          "bcc": "BCC:",
+          "subject": "Subject:",
+          "attachments": "Attachments:"
+        },
+        "placeholders": {
+          "to": "Recipients...",
+          "cc": "CC Recipients...",
+          "bcc": "BCC Recipients...",
+          "subject": "Subject..."
+        },
+        "dialogs": {
+          "unsaved_changes": "Unsaved Changes",
+          "unsaved_message": "You have unsaved changes. Do you want to save as draft before closing?",
+          "save": "Save",
+          "discard": "Discard",
+          "cancel": "Cancel"
+        },
+        "errors": {
+          "error": "Error",
+          "success": "Success", 
+          "validation_error": "Validation Error",
+          "file_not_found": "File not found: {filepath}",
+          "failed_attachment": "Failed to add attachment: {error}",
+          "enter_subject": "Please enter a subject.",
+          "enter_recipient": "Please enter at least one recipient.",
+          "no_account": "No account selected.",
+          "send_failed": "Failed to send email. Please check your connection and try again.",
+          "send_error": "An error occurred while sending: {error}",
+          "sent_successfully": "Email sent successfully!"
+        }
+      },
+      "view": {
+        "window_title": "Email",
+        "placeholders": {
+          "select_folder": "Select a folder to view messages",
+          "select_message": "Select a message to preview...",
+          "search_text": "Search in subject, from, body...",
+          "quick_search": "Quick search..."
+        },
+        "status": {
+          "loading_images": "Loading images...",
+          "connecting": "Connecting to email server...",
+          "loading_messages": "Loading messages...",
+          "searching": "Searching...",
+          "refreshing": "Refreshing email..."
+        },
+        "folders": {
+          "inbox": "📥 Inbox",
+          "sent": "📤 Sent Items", 
+          "drafts": "📝 Drafts",
+          "deleted": "🗑️ Deleted Items",
+          "junk": "🚫 Junk Email"
+        },
+        "security": {
+          "load_images_title": "Load Images?",
+          "load_images_message": "This email contains external images.",
+          "enable_links_title": "Enable Link Opening?", 
+          "enable_links_message": "This email contains external links.",
+          "load_once": "Load Once",
+          "always_load": "Always Load",
+          "dont_load": "Don't Load",
+          "enable_once": "Enable Once",
+          "always_enable": "Always Enable", 
+          "keep_disabled": "Keep Disabled"
+        },
+        "search": {
+          "title": "Search Email",
+          "text_label": "Text:",
+          "scope_label": "In:",
+          "date_label": "Date:",
+          "scope_options": {
+            "all": "All",
+            "subject": "Subject", 
+            "from": "From",
+            "body": "Body",
+            "to_cc": "To/CC"
+          },
+          "date_options": {
+            "any_time": "Any time",
+            "today": "Today",
+            "yesterday": "Yesterday", 
+            "this_week": "This week",
+            "last_week": "Last week",
+            "this_month": "This month",
+            "last_month": "Last month",
+            "custom_range": "Custom range"
+          },
+          "filters": {
+            "has_attachments": "Has attachments",
+            "unread_only": "Unread only",
+            "flagged_only": "Flagged only"
+          },
+          "buttons": {
+            "search": "Search",
+            "clear": "Clear",
+            "close": "Close"
+          }
+        }
+      },
+      "account_manager": {
+        "window_title": "Account Manager",
+        "titles": {
+          "edit": "Edit Account - {name}",
+          "server_config": "Server Configuration - {name}",
+          "connection_test": "Connection Test",
+          "credential_verification": "Credential Verification"
+        },
+        "groups": {
+          "selected_account": "Selected Account",
+          "quick_actions": "Quick Actions",
+          "settings_saved": "Settings Saved"
+        },
+        "labels": {
+          "configure_servers": "Configure email servers for: {email}",
+          "status_unknown": "Unknown",
+          "name": "Name:",
+          "email": "Email:",
+          "status": "Status:",
+          "servers": "Servers:",
+          "last_sync": "Last Sync:",
+          "credentials": "Credentials:",
+          "never": "Never",
+          "incoming_server": "Incoming Server:",
+          "outgoing_server": "Outgoing Server:",
+          "username": "Username:",
+          "password": "Password:",
+          "port": "Port:",
+          "security": "Security:"
+        },
+        "buttons": {
+          "test_connection": "Test Connection",
+          "verify_credentials": "Verify Credentials", 
+          "set_default": "Set as Default",
+          "refresh": "Refresh",
+          "close": "Close",
+          "edit_account": "Edit Account",
+          "delete_account": "Delete Account",
+          "quick_setup": "Quick Setup",
+          "save": "Save",
+          "cancel": "Cancel"
+        },
+        "messages": {
+          "success": "Success",
+          "error": "Error",
+          "validation_error": "Validation Error",
+          "save_error": "Save Error",
+          "settings_saved": "Settings Saved",
+          "account_updated": "Account updated successfully!",
+          "account_update_failed": "Failed to update account.",
+          "save_failed": "Failed to save account: {error}",
+          "imap_required": "IMAP server is required",
+          "smtp_required": "SMTP server is required",
+          "save_db_failed": "Failed to save settings to database.",
+          "no_account_manager": "Account manager not available for saving.",
+          "save_settings_failed": "Failed to save settings: {error}",
+          "load_failed": "Failed to load accounts: {error}",
+          "account_deleted": "Account deleted successfully!",
+          "delete_failed": "Failed to delete account.",
+          "delete_error": "Failed to delete account: {error}",
+          "default_set": "'{name}' is now the default account.",
+          "default_failed": "Failed to set default account.",
+          "default_error": "Failed to set default account: {error}",
+          "testing_imap": "Testing IMAP connection...",
+          "testing_smtp": "Testing SMTP connection...",
+          "delete_confirmation": "Are you sure you want to delete the account '{name}'?\n\nThis will permanently remove the account and all stored credentials."
+        },
+        "quick_setup": {
+          "gmail": "Gmail",
+          "outlook": "Outlook/Hotmail",
+          "yahoo": "Yahoo",
+          "other": "Other"
+        }
+      }
+    },
+    "toolbars": {
+      "main": "Main",
+      "new_email": "New Email", 
+      "new_email_tooltip": "Compose a new email (Ctrl+N)",
+      "reply": "Reply",
+      "reply_all": "Reply All",
+      "forward": "Forward",
+      "delete": "Delete"
     }
   },
   "account_setup": {

@@ -75,5 +75,341 @@
       "retry": "Reintentar",
       "skip": "Omitir"
     }
+  },
+  "main_window": {
+    "title": "Adelfa Personal Information Manager - {module}",
+    "modules": {
+      "email": "Correo",
+      "calendar": "Calendario", 
+      "contacts": "Contactos",
+      "tasks": "Tareas",
+      "notes": "Notas"
+    },
+    "folders": "Carpetas",
+    "placeholders": {
+      "select_folder": "Selecciona una carpeta para ver mensajes",
+      "select_message": "Selecciona un mensaje para vista previa..."
+    },
+    "status": {
+      "connecting": "Conectando...",
+      "connecting_accounts": "Conectando a cuentas de correo...",
+      "refreshing": "Actualizando correo..."
+    }
+  },
+  "menus": {
+    "file": "Archivo",
+    "new": "Nuevo",
+    "email": "Correo",
+    "calendar_event": "Evento de Calendario",
+    "contact": "Contacto",
+    "task": "Tarea",
+    "note": "Nota",
+    "import_export": "Importar/Exportar",
+    "import_pst": "Importar Outlook PST...",
+    "import_ics": "Importar Calendario (ICS)...",
+    "import_vcf": "Importar Contactos (vCard)...",
+    "export_calendar": "Exportar Calendario...",
+    "export_contacts": "Exportar Contactos...",
+    "add_account": "Agregar Cuenta...",
+    "account_manager": "Administrador de Cuentas...",
+    "account_settings": "Configuración de Cuenta...",
+    "exit": "Salir",
+    "edit": "Editar",
+    "undo": "Deshacer",
+    "redo": "Rehacer",
+    "cut": "Cortar",
+    "copy": "Copiar",
+    "paste": "Pegar",
+    "find": "Buscar...",
+    "preferences": "Preferencias...",
+    "view": "Ver",
+    "preview_pane": "Panel de Vista Previa",
+    "off": "Desactivado",
+    "right": "Derecha",
+    "bottom": "Abajo",
+    "tools": "Herramientas",
+    "rules_filters": "Reglas y Filtros...",
+    "signatures": "Firmas...",
+    "export_data": "Exportar Datos...",
+    "cleanup_tools": "Herramientas de Limpieza...",
+    "help": "Ayuda",
+    "check_updates": "Buscar Actualizaciones...",
+    "about": "Acerca de Adelfa"
+  },
+  "email": {
+    "composer": {
+      "window_title": "Redactar Correo",
+      "send_button": "Enviar",
+      "sending_button": "Enviando...",
+      "add_file": "Agregar Archivo...",
+      "sending": "Enviando...",
+      "sending_status": "Enviando correo electrónico...",
+      "show_formatting": "Mostrar Formato",
+      "hide_formatting": "Ocultar Formato",
+      "save_draft": "Guardar Borrador",
+      "labels": {
+        "font": "Fuente:",
+        "to": "Para:",
+        "cc": "CC:",
+        "bcc": "CCO:",
+        "subject": "Asunto:",
+        "attachments": "Adjuntos:"
+      },
+      "placeholders": {
+        "to": "Destinatarios...",
+        "cc": "Destinatarios CC...",
+        "bcc": "Destinatarios CCO...",
+        "subject": "Asunto..."
+      },
+      "dialogs": {
+        "unsaved_changes": "Cambios Sin Guardar",
+        "unsaved_message": "Tienes cambios sin guardar. ¿Quieres guardar como borrador antes de cerrar?",
+        "save": "Guardar",
+        "discard": "Descartar",
+        "cancel": "Cancelar"
+      },
+      "errors": {
+        "error": "Error",
+        "success": "Éxito", 
+        "validation_error": "Error de Validación",
+        "file_not_found": "Archivo no encontrado: {filepath}",
+        "failed_attachment": "Error al agregar adjunto: {error}",
+        "enter_subject": "Por favor ingresa un asunto.",
+        "enter_recipient": "Por favor ingresa al menos un destinatario.",
+        "no_account": "No hay cuenta seleccionada.",
+        "send_failed": "Error al enviar correo. Por favor verifica tu conexión e intenta de nuevo.",
+        "send_error": "Ocurrió un error al enviar: {error}",
+        "sent_successfully": "¡Correo enviado exitosamente!"
+      }
+    },
+    "view": {
+      "window_title": "Correo Electrónico",
+      "placeholders": {
+        "select_folder": "Selecciona una carpeta para ver mensajes",
+        "select_message": "Selecciona un mensaje para previsualizar...",
+        "search_text": "Buscar en asunto, remitente, cuerpo...",
+        "quick_search": "Búsqueda rápida..."
+      },
+      "status": {
+        "loading_images": "Cargando imágenes...",
+        "connecting": "Conectando al servidor de correo...",
+        "loading_messages": "Cargando mensajes...",
+        "searching": "Buscando...",
+        "refreshing": "Actualizando correo..."
+      },
+      "folders": {
+        "inbox": "📥 Bandeja de Entrada",
+        "sent": "📤 Elementos Enviados", 
+        "drafts": "📝 Borradores",
+        "deleted": "🗑️ Elementos Eliminados",
+        "junk": "🚫 Correo No Deseado"
+      },
+      "security": {
+        "load_images_title": "¿Cargar Imágenes?",
+        "load_images_message": "Este correo contiene imágenes externas.",
+        "enable_links_title": "¿Habilitar Apertura de Enlaces?", 
+        "enable_links_message": "Este correo contiene enlaces externos.",
+        "load_once": "Cargar Una Vez",
+        "always_load": "Siempre Cargar",
+        "dont_load": "No Cargar",
+        "enable_once": "Habilitar Una Vez",
+        "always_enable": "Siempre Habilitar", 
+        "keep_disabled": "Mantener Deshabilitado"
+      },
+      "search": {
+        "title": "Buscar Correo",
+        "text_label": "Texto:",
+        "scope_label": "En:",
+        "date_label": "Fecha:",
+        "scope_options": {
+          "all": "Todo",
+          "subject": "Asunto", 
+          "from": "Remitente",
+          "body": "Cuerpo",
+          "to_cc": "Para/CC"
+        },
+        "date_options": {
+          "any_time": "Cualquier momento",
+          "today": "Hoy",
+          "yesterday": "Ayer", 
+          "this_week": "Esta semana",
+          "last_week": "Semana pasada",
+          "this_month": "Este mes",
+          "last_month": "Mes pasado",
+          "custom_range": "Rango personalizado"
+        },
+        "filters": {
+          "has_attachments": "Con adjuntos",
+          "unread_only": "Solo no leídos",
+          "flagged_only": "Solo marcados"
+        },
+        "buttons": {
+          "search": "Buscar",
+          "clear": "Limpiar",
+          "close": "Cerrar"
+        }
+      }
+    },
+    "account_manager": {
+      "window_title": "Administrador de Cuentas",
+      "titles": {
+        "edit": "Editar Cuenta - {name}",
+        "server_config": "Configuración del Servidor - {name}",
+        "connection_test": "Prueba de Conexión",
+        "credential_verification": "Verificación de Credenciales"
+      },
+      "groups": {
+        "selected_account": "Cuenta Seleccionada",
+        "quick_actions": "Acciones Rápidas",
+        "settings_saved": "Configuración Guardada"
+      },
+      "labels": {
+        "configure_servers": "Configurar servidores de correo para: {email}",
+        "status_unknown": "Desconocido",
+        "name": "Nombre:",
+        "email": "Correo:",
+        "status": "Estado:",
+        "servers": "Servidores:",
+        "last_sync": "Última Sincronización:",
+        "credentials": "Credenciales:",
+        "never": "Nunca",
+        "incoming_server": "Servidor Entrante:",
+        "outgoing_server": "Servidor Saliente:",
+        "username": "Usuario:",
+        "password": "Contraseña:",
+        "port": "Puerto:",
+        "security": "Seguridad:"
+      },
+      "buttons": {
+        "test_connection": "Probar Conexión",
+        "verify_credentials": "Verificar Credenciales", 
+        "set_default": "Establecer por Defecto",
+        "refresh": "Actualizar",
+        "close": "Cerrar",
+        "edit_account": "Editar Cuenta",
+        "delete_account": "Eliminar Cuenta",
+        "quick_setup": "Configuración Rápida",
+        "save": "Guardar",
+        "cancel": "Cancelar"
+      },
+      "messages": {
+        "success": "Éxito",
+        "error": "Error",
+        "validation_error": "Error de Validación",
+        "save_error": "Error al Guardar",
+        "settings_saved": "Configuración Guardada",
+        "account_updated": "¡Cuenta actualizada exitosamente!",
+        "account_update_failed": "Error al actualizar cuenta.",
+        "save_failed": "Error al guardar cuenta: {error}",
+        "imap_required": "Se requiere servidor IMAP",
+        "smtp_required": "Se requiere servidor SMTP",
+        "save_db_failed": "Error al guardar configuración en base de datos.",
+        "no_account_manager": "Administrador de cuentas no disponible para guardar.",
+        "save_settings_failed": "Error al guardar configuración: {error}",
+        "load_failed": "Error al cargar cuentas: {error}",
+        "account_deleted": "¡Cuenta eliminada exitosamente!",
+        "delete_failed": "Error al eliminar cuenta.",
+        "delete_error": "Error al eliminar cuenta: {error}",
+        "default_set": "'{name}' es ahora la cuenta por defecto.",
+        "default_failed": "Error al establecer cuenta por defecto.",
+        "default_error": "Error al establecer cuenta por defecto: {error}",
+        "testing_imap": "Probando conexión IMAP...",
+        "testing_smtp": "Probando conexión SMTP...",
+        "delete_confirmation": "¿Estás seguro de que quieres eliminar la cuenta '{name}'?\n\nEsto eliminará permanentemente la cuenta y todas las credenciales almacenadas."
+      },
+      "quick_setup": {
+        "gmail": "Gmail",
+        "outlook": "Outlook/Hotmail",
+        "yahoo": "Yahoo",
+        "other": "Otro"
+      }
+    }
+  },
+  "main_window": {
+    "title": "Administrador de Información Personal Adelfa",
+    "title_with_module": "Administrador de Información Personal Adelfa - {module}",
+    "modules": {
+      "email": "Correo Electrónico",
+      "calendar": "Calendario", 
+      "contacts": "Contactos",
+      "tasks": "Tareas",
+      "notes": "Notas"
+    },
+    "status": {
+      "connecting": "Conectando...",
+      "connecting_accounts": "Conectando a cuentas de correo...",
+      "connected": "Conectado",
+      "connection_failed": "Conexión fallida",
+      "not_connected": "No conectado",
+      "refreshing": "Actualizando correo...",
+      "account_added": "Cuenta '{name}' agregada",
+      "account_settings_updated": "Configuración de cuenta actualizada",
+      "email_connected": "Cuentas de correo conectadas exitosamente",
+      "email_setup_failed": "Configuración de correo falló: {error}",
+      "email_sent": "¡Correo enviado exitosamente!",
+      "email_send_failed": "Error al enviar correo",
+      "app_version": "Administrador de Información Personal Adelfa v0.1.0-dev"
+    },
+    "dialogs": {
+      "no_accounts_title": "Sin Cuentas",
+      "no_accounts_message": "Por favor configura una cuenta de correo primero.",
+      "account_setup_error": "Error de Configuración de Cuenta",
+      "account_setup_failed": "Error al configurar cuenta: {error}",
+      "feature_unavailable": "Función No Disponible",
+      "account_management_unavailable": "La gestión de cuentas no está disponible. Se requiere conexión a base de datos.",
+      "account_manager_error": "Error del Administrador de Cuentas",
+      "account_manager_failed": "Error al abrir administrador de cuentas: {error}",
+      "update_error": "Error de Actualización",
+      "account_changes_failed": "Error al aplicar cambios de cuenta: {error}"
+    }
+  },
+  "menus": {
+    "file": "Archivo",
+    "new": "Nuevo",
+    "email": "Correo Electrónico",
+    "calendar_event": "Evento de Calendario",
+    "contact": "Contacto",
+    "task": "Tarea",
+    "note": "Nota",
+    "import_export": "Importar/Exportar",
+    "import_pst": "Importar PST de Outlook...",
+    "import_ics": "Importar Calendario (ICS)...",
+    "import_vcf": "Importar Contactos (vCard)...",
+    "export_calendar": "Exportar Calendario...",
+    "export_contacts": "Exportar Contactos...",
+    "add_account": "Agregar Cuenta...",
+    "account_manager": "Administrador de Cuentas...",
+    "account_settings": "Configuración de Cuenta...",
+    "exit": "Salir",
+    "edit": "Editar",
+    "undo": "Deshacer",
+    "redo": "Rehacer",
+    "cut": "Cortar",
+    "copy": "Copiar",
+    "paste": "Pegar",
+    "find": "Buscar...",
+    "preferences": "Preferencias...",
+    "view": "Ver",
+    "preview_pane": "Panel de Vista Previa",
+    "off": "Desactivado",
+    "right": "Derecha", 
+    "bottom": "Abajo",
+    "tools": "Herramientas",
+    "rules_filters": "Reglas y Filtros...",
+    "signatures": "Firmas...",
+    "export_data": "Exportar Datos...",
+    "cleanup_tools": "Herramientas de Limpieza...",
+    "help": "Ayuda",
+    "check_updates": "Buscar Actualizaciones...",
+    "about": "Acerca de Adelfa"
+  },
+  "toolbars": {
+    "main": "Principal",
+    "new_email": "Nuevo Correo", 
+    "new_email_tooltip": "Redactar un nuevo correo (Ctrl+N)",
+    "reply": "Responder",
+    "reply_all": "Responder a Todos",
+    "forward": "Reenviar",
+    "delete": "Eliminar"
   }
 } 

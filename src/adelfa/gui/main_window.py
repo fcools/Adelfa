@@ -14,6 +14,7 @@ from PyQt6.QtGui import QAction, QIcon, QFont
 
 from ..config.app_config import AppConfig
 from ..utils.logging_setup import get_logger
+from ..utils.i18n import _
 from ..core.email.account_manager import AccountManager
 from ..core.email.email_manager import EmailManager
 from ..core.email.credential_manager import CredentialManager
@@ -154,7 +155,7 @@ class AdelfahMainWindow(QMainWindow):
         self.account_manager = AccountManager(db_session)
         self.email_manager = EmailManager(self.credential_manager, db_session)
         
-        self.setWindowTitle("Adelfa Personal Information Manager")
+        self.setWindowTitle(_("main_window.title"))
         self.setMinimumSize(1000, 700)
         
         # Apply configuration
@@ -441,7 +442,7 @@ class AdelfahMainWindow(QMainWindow):
             QListWidget: Configured message list.
         """
         list_widget = QListWidget()
-        list_widget.setPlaceholderText("Select a folder to view messages")
+        list_widget.setPlaceholderText(_("main_window.placeholders.select_folder"))
         return list_widget
     
     def _create_message_preview(self) -> QTextEdit:
@@ -453,7 +454,7 @@ class AdelfahMainWindow(QMainWindow):
         """
         preview = QTextEdit()
         preview.setReadOnly(True)
-        preview.setPlaceholderText("Select a message to preview...")
+        preview.setPlaceholderText(_("main_window.placeholders.select_message"))
         return preview
     
     def _setup_menus(self) -> None:
@@ -461,121 +462,114 @@ class AdelfahMainWindow(QMainWindow):
         menubar = self.menuBar()
         
         # File Menu
-        file_menu = menubar.addMenu("File")
+        file_menu = menubar.addMenu(_("menus.file"))
         
         # New submenu
-        new_menu = file_menu.addMenu("New")
+        new_menu = file_menu.addMenu(_("menus.new"))
         
-        new_email_action = QAction("Email", self)
+        new_email_action = QAction(_("menus.email"), self)
         new_email_action.setShortcut("Ctrl+N")
         new_menu.addAction(new_email_action)
         
-        new_event_action = QAction("Calendar Event", self)
+        new_event_action = QAction(_("menus.calendar_event"), self)
         new_event_action.setShortcut("Ctrl+Shift+E")
         new_menu.addAction(new_event_action)
         
-        new_contact_action = QAction("Contact", self)
+        new_contact_action = QAction(_("menus.contact"), self)
         new_contact_action.setShortcut("Ctrl+Shift+C")
         new_menu.addAction(new_contact_action)
         
-        new_task_action = QAction("Task", self)
+        new_task_action = QAction(_("menus.task"), self)
         new_task_action.setShortcut("Ctrl+Shift+T")
         new_menu.addAction(new_task_action)
         
-        new_note_action = QAction("Note", self)
+        new_note_action = QAction(_("menus.note"), self)
         new_note_action.setShortcut("Ctrl+Shift+N")
         new_menu.addAction(new_note_action)
         
         file_menu.addSeparator()
         
         # Import/Export submenu
-        import_export_menu = file_menu.addMenu("Import/Export")
+        import_export_menu = file_menu.addMenu(_("menus.import_export"))
         
-        import_pst_action = QAction("Import Outlook PST...", self)
+        import_pst_action = QAction(_("menus.import_pst"), self)
         import_export_menu.addAction(import_pst_action)
         
-        import_ics_action = QAction("Import Calendar (ICS)...", self)
+        import_ics_action = QAction(_("menus.import_ics"), self)
         import_export_menu.addAction(import_ics_action)
         
-        import_vcf_action = QAction("Import Contacts (vCard)...", self)
+        import_vcf_action = QAction(_("menus.import_vcf"), self)
         import_export_menu.addAction(import_vcf_action)
         
         import_export_menu.addSeparator()
         
-        export_calendar_action = QAction("Export Calendar...", self)
+        export_calendar_action = QAction(_("menus.export_calendar"), self)
         import_export_menu.addAction(export_calendar_action)
         
-        export_contacts_action = QAction("Export Contacts...", self)
+        export_contacts_action = QAction(_("menus.export_contacts"), self)
         import_export_menu.addAction(export_contacts_action)
         
         file_menu.addSeparator()
         
         # Account management
-        add_account_action = QAction("Add Account...", self)
+        add_account_action = QAction(_("menus.add_account"), self)
         add_account_action.triggered.connect(self._on_add_account)
         file_menu.addAction(add_account_action)
         
-        account_manager_action = QAction("Account Manager...", self)
+        account_manager_action = QAction(_("menus.account_manager"), self)
         account_manager_action.triggered.connect(self._on_account_manager)
         file_menu.addAction(account_manager_action)
         
-        account_settings_action = QAction("Account Settings...", self)
+        account_settings_action = QAction(_("menus.account_settings"), self)
         account_settings_action.triggered.connect(self._on_account_settings)
         file_menu.addAction(account_settings_action)
         
         file_menu.addSeparator()
         
-        exit_action = QAction("Exit", self)
+        exit_action = QAction(_("menus.exit"), self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
         # Edit Menu
-        edit_menu = menubar.addMenu("Edit")
+        edit_menu = menubar.addMenu(_("menus.edit"))
         
-        # Standard edit actions
-        undo_action = QAction("Undo", self)
+        undo_action = QAction(_("menus.undo"), self)
         undo_action.setShortcut("Ctrl+Z")
         edit_menu.addAction(undo_action)
         
-        redo_action = QAction("Redo", self)
+        redo_action = QAction(_("menus.redo"), self)
         redo_action.setShortcut("Ctrl+Y")
         edit_menu.addAction(redo_action)
         
         edit_menu.addSeparator()
         
-        cut_action = QAction("Cut", self)
+        cut_action = QAction(_("menus.cut"), self)
         cut_action.setShortcut("Ctrl+X")
         edit_menu.addAction(cut_action)
         
-        copy_action = QAction("Copy", self)
+        copy_action = QAction(_("menus.copy"), self)
         copy_action.setShortcut("Ctrl+C")
         edit_menu.addAction(copy_action)
         
-        paste_action = QAction("Paste", self)
+        paste_action = QAction(_("menus.paste"), self)
         paste_action.setShortcut("Ctrl+V")
         edit_menu.addAction(paste_action)
         
         edit_menu.addSeparator()
         
-        select_all_action = QAction("Select All", self)
-        select_all_action.setShortcut("Ctrl+A")
-        edit_menu.addAction(select_all_action)
-        
-        edit_menu.addSeparator()
-        
-        find_action = QAction("Find...", self)
+        find_action = QAction(_("menus.find"), self)
         find_action.setShortcut("Ctrl+F")
         edit_menu.addAction(find_action)
         
         edit_menu.addSeparator()
         
-        preferences_action = QAction("Preferences...", self)
+        preferences_action = QAction(_("menus.preferences"), self)
         preferences_action.setShortcut("Ctrl+,")
         edit_menu.addAction(preferences_action)
         
         # View Menu
-        view_menu = menubar.addMenu("View")
+        view_menu = menubar.addMenu(_("menus.view"))
         
         # Module switching
         modules_menu = view_menu.addMenu("Go to Module")
@@ -613,25 +607,25 @@ class AdelfahMainWindow(QMainWindow):
         view_menu.addAction(toggle_navigation_action)
         
         # Preview pane submenu
-        preview_pane_menu = view_menu.addMenu("Preview Pane")
+        preview_pane_menu = view_menu.addMenu(_("menus.preview_pane"))
         
         # Create action group for radio button behavior
         from PyQt6.QtGui import QActionGroup
         self.preview_pane_group = QActionGroup(self)
         
-        self.preview_off_action = QAction("Off", self)
+        self.preview_off_action = QAction(_("menus.off"), self)
         self.preview_off_action.setCheckable(True)
         self.preview_off_action.triggered.connect(lambda: self._set_preview_pane_position("off"))
         self.preview_pane_group.addAction(self.preview_off_action)
         preview_pane_menu.addAction(self.preview_off_action)
         
-        self.preview_right_action = QAction("Right", self)
+        self.preview_right_action = QAction(_("menus.right"), self)
         self.preview_right_action.setCheckable(True)
         self.preview_right_action.triggered.connect(lambda: self._set_preview_pane_position("right"))
         self.preview_pane_group.addAction(self.preview_right_action)
         preview_pane_menu.addAction(self.preview_right_action)
         
-        self.preview_bottom_action = QAction("Bottom", self)
+        self.preview_bottom_action = QAction(_("menus.bottom"), self)
         self.preview_bottom_action.setCheckable(True)
         self.preview_bottom_action.triggered.connect(lambda: self._set_preview_pane_position("bottom"))
         self.preview_pane_group.addAction(self.preview_bottom_action)
@@ -649,7 +643,7 @@ class AdelfahMainWindow(QMainWindow):
         view_modes_menu.addAction(reading_view_action)
         
         # Tools Menu
-        tools_menu = menubar.addMenu("Tools")
+        tools_menu = menubar.addMenu(_("menus.tools"))
         
         sync_action = QAction("Synchronize All", self)
         sync_action.setShortcut("F9")
@@ -657,22 +651,22 @@ class AdelfahMainWindow(QMainWindow):
         
         tools_menu.addSeparator()
         
-        rules_action = QAction("Rules and Filters...", self)
-        tools_menu.addAction(rules_action)
+        rules_filters_action = QAction(_("menus.rules_filters"), self)
+        tools_menu.addAction(rules_filters_action)
         
-        signatures_action = QAction("Signatures...", self)
+        signatures_action = QAction(_("menus.signatures"), self)
         tools_menu.addAction(signatures_action)
         
         tools_menu.addSeparator()
         
-        data_export_action = QAction("Export Data...", self)
-        tools_menu.addAction(data_export_action)
+        export_data_action = QAction(_("menus.export_data"), self)
+        tools_menu.addAction(export_data_action)
         
-        cleanup_action = QAction("Cleanup Tools...", self)
-        tools_menu.addAction(cleanup_action)
+        cleanup_tools_action = QAction(_("menus.cleanup_tools"), self)
+        tools_menu.addAction(cleanup_tools_action)
         
         # Help Menu
-        help_menu = menubar.addMenu("Help")
+        help_menu = menubar.addMenu(_("menus.help"))
         
         help_action = QAction("Help", self)
         help_action.setShortcut("F1")
@@ -683,45 +677,45 @@ class AdelfahMainWindow(QMainWindow):
         
         help_menu.addSeparator()
         
-        check_updates_action = QAction("Check for Updates...", self)
+        check_updates_action = QAction(_("menus.check_updates"), self)
         help_menu.addAction(check_updates_action)
         
         help_menu.addSeparator()
         
-        about_action = QAction("About Adelfa", self)
+        about_action = QAction(_("menus.about"), self)
         help_menu.addAction(about_action)
     
     def _setup_toolbars(self) -> None:
         """Set up the application toolbars."""
         # Main toolbar
-        main_toolbar = self.addToolBar("Main")
+        main_toolbar = self.addToolBar(_("toolbars.main"))
         main_toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         
         # New Email button
-        new_email_action = QAction("New Email", self)
+        new_email_action = QAction(_("toolbars.new_email"), self)
         new_email_action.setShortcut("Ctrl+N")
-        new_email_action.setToolTip("Compose a new email (Ctrl+N)")
+        new_email_action.setToolTip(_("toolbars.new_email_tooltip"))
         main_toolbar.addAction(new_email_action)
         
         main_toolbar.addSeparator()
         
         # Reply buttons
-        reply_action = QAction("Reply", self)
+        reply_action = QAction(_("toolbars.reply"), self)
         reply_action.setShortcut("Ctrl+R")
         main_toolbar.addAction(reply_action)
         
-        reply_all_action = QAction("Reply All", self)
+        reply_all_action = QAction(_("toolbars.reply_all"), self)
         reply_all_action.setShortcut("Ctrl+Shift+R")
         main_toolbar.addAction(reply_all_action)
         
-        forward_action = QAction("Forward", self)
+        forward_action = QAction(_("toolbars.forward"), self)
         forward_action.setShortcut("Ctrl+F")
         main_toolbar.addAction(forward_action)
         
         main_toolbar.addSeparator()
         
         # Delete button
-        delete_action = QAction("Delete", self)
+        delete_action = QAction(_("toolbars.delete"), self)
         delete_action.setShortcut("Delete")
         main_toolbar.addAction(delete_action)
     
@@ -730,10 +724,10 @@ class AdelfahMainWindow(QMainWindow):
         status_bar = self.statusBar()
         
         # Connection status
-        self.connection_status = QLabel("Not connected")
+        self.connection_status = QLabel(_("main_window.status.not_connected"))
         status_bar.addWidget(self.connection_status)
         
-        status_bar.addPermanentWidget(QLabel("Adelfa Personal Information Manager v0.1.0-dev"))
+        status_bar.addPermanentWidget(QLabel(_("main_window.status.app_version")))
     
     def _on_add_account(self) -> None:
         """Handle Add Account menu action."""
@@ -741,7 +735,7 @@ class AdelfahMainWindow(QMainWindow):
             try:
                 account = self.account_manager.show_account_setup_wizard(self)
                 if account:
-                    self.connection_status.setText(f"Account '{account.name}' added")
+                    self.connection_status.setText(_("main_window.status.account_added").format(name=account.name))
                     self.logger.info(f"Account added: {account.name} ({account.email_address})")
                     
                     # Refresh any UI components that show accounts
@@ -751,15 +745,15 @@ class AdelfahMainWindow(QMainWindow):
                 from PyQt6.QtWidgets import QMessageBox
                 QMessageBox.critical(
                     self,
-                    "Account Setup Error",
-                    f"Failed to set up account: {str(e)}"
+                    _("main_window.dialogs.account_setup_error"),
+                    _("main_window.dialogs.account_setup_failed").format(error=str(e))
                 )
         else:
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(
                 self,
-                "Feature Unavailable",
-                "Account management is not available. Database connection required."
+                _("main_window.dialogs.feature_unavailable"),
+                _("main_window.dialogs.account_management_unavailable")
             )
     
     def _on_account_manager(self) -> None:
@@ -774,15 +768,15 @@ class AdelfahMainWindow(QMainWindow):
                 from PyQt6.QtWidgets import QMessageBox
                 QMessageBox.critical(
                     self,
-                    "Account Manager Error",
-                    f"Failed to open account manager: {str(e)}"
+                    _("main_window.dialogs.account_manager_error"),
+                    _("main_window.dialogs.account_manager_failed").format(error=str(e))
                 )
         else:
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(
                 self,
-                "Feature Unavailable",
-                "Account management is not available. Database connection required."
+                _("main_window.dialogs.feature_unavailable"),
+                _("main_window.dialogs.account_management_unavailable")
             )
     
     def _on_account_settings(self) -> None:
@@ -802,15 +796,15 @@ class AdelfahMainWindow(QMainWindow):
             self._refresh_account_displays()
             
             self.logger.info("Account changes applied successfully")
-            self.statusBar().showMessage("Account settings updated", 3000)
+            self.statusBar().showMessage(_("main_window.status.account_settings_updated"), 3000)
             
         except Exception as e:
             self.logger.error(f"Failed to apply account changes: {e}")
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(
                 self,
-                "Update Error",
-                f"Failed to apply account changes: {str(e)}"
+                _("main_window.dialogs.update_error"),
+                _("main_window.dialogs.account_changes_failed").format(error=str(e))
             )
     
     def _refresh_account_displays(self) -> None:
@@ -848,7 +842,7 @@ class AdelfahMainWindow(QMainWindow):
             
         except Exception as e:
             self.logger.error(f"Failed to setup email accounts: {e}")
-            self.statusBar().showMessage(f"Email setup failed: {e}")
+            self.statusBar().showMessage(_("main_window.status.email_setup_failed").format(error=str(e)), 5000)
     
     def _setup_email_accounts_async(self, accounts, email_widget):
         """Setup email account connections asynchronously."""
@@ -884,8 +878,8 @@ class AdelfahMainWindow(QMainWindow):
         self.email_setup_worker.error.connect(self.email_setup_thread.quit)
         
         # Start background setup
-        self.connection_status.setText("Connecting...")
-        self.statusBar().showMessage("Connecting to email accounts...")
+        self.connection_status.setText(_("main_window.status.connecting"))
+        self.statusBar().showMessage(_("main_window.status.connecting_accounts"), 0)
         self.email_setup_thread.start()
         
         # Load accounts in EmailView (this should be quick without network operations)
@@ -893,8 +887,8 @@ class AdelfahMainWindow(QMainWindow):
     
     def _on_email_setup_finished(self):
         """Called when email account setup completes."""
-        self.statusBar().showMessage("Email accounts connected successfully", 3000)
-        self.connection_status.setText("Connected")
+        self.statusBar().showMessage(_("main_window.status.email_connected"), 3000)
+        self.connection_status.setText(_("main_window.status.connected"))
         if hasattr(self, 'email_widget'):
             # Refresh the email view now that connections are established
             # (accounts were already loaded in _setup_email_accounts_async)
@@ -903,8 +897,8 @@ class AdelfahMainWindow(QMainWindow):
     def _on_email_setup_error(self, error_msg):
         """Called when email account setup fails."""
         self.logger.error(f"Email setup error: {error_msg}")
-        self.connection_status.setText("Connection failed")
-        self.statusBar().showMessage(f"Email setup failed: {error_msg}", 5000)
+        self.connection_status.setText(_("main_window.status.connection_failed"))
+        self.statusBar().showMessage(_("main_window.status.email_setup_failed").format(error=error_msg), 5000)
 
     def compose_new_email(self):
         """Create a new email."""
@@ -913,8 +907,8 @@ class AdelfahMainWindow(QMainWindow):
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.information(
                 self, 
-                "No Accounts", 
-                "Please set up an email account first."
+                _("main_window.dialogs.no_accounts_title"), 
+                _("main_window.dialogs.no_accounts_message")
             )
             return
         
@@ -926,11 +920,11 @@ class AdelfahMainWindow(QMainWindow):
         """Refresh email folders."""
         if hasattr(self, 'email_widget') and hasattr(self.email_widget, 'refresh_current_folder'):
             self.email_widget.refresh_current_folder()
-        self.statusBar().showMessage("Refreshing email...", 2000)
+        self.statusBar().showMessage(_("main_window.status.refreshing"), 2000)
     
     def on_email_sent(self, success: bool):
         """Handle email sent notification."""
         if success:
-            self.statusBar().showMessage("Email sent successfully!", 3000)
+            self.statusBar().showMessage(_("main_window.status.email_sent"), 3000)
         else:
-            self.statusBar().showMessage("Failed to send email", 3000) 
+            self.statusBar().showMessage(_("main_window.status.email_send_failed"), 3000) 

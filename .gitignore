@@ -116,4 +116,17 @@ dmypy.json
 *.key
 *.pem
 secrets.toml
-credentials.json 
+credentials.json
+.env*
+config.json
+auth.json
+tokens.json
+passwords.txt
+*.p12
+*.pfx
+*.keystore
+
+# Development test data
+test_credentials.py
+demo_data.py
+sample_config.py 

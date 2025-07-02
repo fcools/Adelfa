@@ -1198,32 +1198,29 @@ class MessagePreviewWidget(QWebEngineView):
         
         # Create custom message box
         msg_box = QMessageBox(self)
-        msg_box.setWindowTitle("Load Images?")
-        msg_box.setText("This email contains external images.")
-        msg_box.setInformativeText("Do you want to load images for this email?")
+        msg_box.setWindowTitle(_("email.view.security.load_images_title"))
+        msg_box.setText(_("email.view.security.load_images_message"))
+        msg_box.addButton(_("email.view.security.load_once"), QMessageBox.ButtonRole.AcceptRole)
+        msg_box.addButton(_("email.view.security.always_load"), QMessageBox.ButtonRole.YesRole)
+        msg_box.addButton(_("email.view.security.dont_load"), QMessageBox.ButtonRole.RejectRole)
         
-        # Custom buttons
-        load_once_btn = msg_box.addButton("Load Once", QMessageBox.ButtonRole.AcceptRole)
-        always_load_btn = msg_box.addButton("Always Load for This Email", QMessageBox.ButtonRole.AcceptRole)
-        dont_load_btn = msg_box.addButton("Don't Load", QMessageBox.ButtonRole.RejectRole)
-        
-        msg_box.setDefaultButton(dont_load_btn)
+        msg_box.setDefaultButton(msg_box.addButton(_("email.view.security.dont_load"), QMessageBox.ButtonRole.RejectRole))
         
         # Show message box
         result = msg_box.exec()
         clicked_button = msg_box.clickedButton()
         
-        if clicked_button == load_once_btn:
+        if clicked_button == msg_box.addButton(_("email.view.security.load_once"), QMessageBox.ButtonRole.AcceptRole):
             # Load images just this time, don't save decision
             self.current_session_images_enabled = True
             self._reload_current_message()
-        elif clicked_button == always_load_btn:
+        elif clicked_button == msg_box.addButton(_("email.view.security.always_load"), QMessageBox.ButtonRole.YesRole):
             # Save decision and load images
             if self.cache_manager and self.current_email_hash:
                 self.cache_manager.set_image_decision(self.current_email_hash, True)
                 self.status_message.emit("Images will always be loaded for this email", 3000)
             self._reload_current_message()
-        elif clicked_button == dont_load_btn:
+        elif clicked_button == msg_box.addButton(_("email.view.security.dont_load"), QMessageBox.ButtonRole.RejectRole):
             # Save decision to not load
             if self.cache_manager and self.current_email_hash:
                 self.cache_manager.set_image_decision(self.current_email_hash, False)
@@ -2004,7 +2001,7 @@ class EmailSearchWidget(QFrame):
         layout.setContentsMargins(10, 5, 10, 5)
         
         # Title
-        title_label = QLabel("Search Email")
+        title_label = QLabel(_("email.view.search.title"))
         title_label.setStyleSheet("font-weight: bold; font-size: 12px;")
         layout.addWidget(title_label)
         
@@ -2012,24 +2009,36 @@ class EmailSearchWidget(QFrame):
         criteria_layout = QHBoxLayout()
         
         # Search text
-        criteria_layout.addWidget(QLabel("Text:"))
+        criteria_layout.addWidget(QLabel(_("email.view.search.text_label")))
         self.search_text = QLineEdit()
-        self.search_text.setPlaceholderText("Search in subject, from, body...")
+        self.search_text.setPlaceholderText(_("email.view.placeholders.search_text"))
         self.search_text.returnPressed.connect(self.perform_search)
         criteria_layout.addWidget(self.search_text)
         
         # Search scope
-        criteria_layout.addWidget(QLabel("In:"))
+        criteria_layout.addWidget(QLabel(_("email.view.search.scope_label")))
         self.search_scope = QComboBox()
-        self.search_scope.addItems(["All", "Subject", "From", "Body", "To/CC"])
+        self.search_scope.addItems([
+            _("email.view.search.scope_options.all"),
+            _("email.view.search.scope_options.subject"),
+            _("email.view.search.scope_options.from"),
+            _("email.view.search.scope_options.body"),
+            _("email.view.search.scope_options.to_cc")
+        ])
         criteria_layout.addWidget(self.search_scope)
         
         # Date range
-        criteria_layout.addWidget(QLabel("Date:"))
+        criteria_layout.addWidget(QLabel(_("email.view.search.date_label")))
         self.date_range = QComboBox()
         self.date_range.addItems([
-            "Any time", "Today", "Yesterday", "This week", 
-            "Last week", "This month", "Last month", "Custom range"
+            _("email.view.search.date_options.any_time"),
+            _("email.view.search.date_options.today"),
+            _("email.view.search.date_options.yesterday"),
+            _("email.view.search.date_options.this_week"),
+            _("email.view.search.date_options.last_week"),
+            _("email.view.search.date_options.this_month"),
+            _("email.view.search.date_options.last_month"),
+            _("email.view.search.date_options.custom_range")
         ])
         criteria_layout.addWidget(self.date_range)
         
@@ -2038,31 +2047,29 @@ class EmailSearchWidget(QFrame):
         # Additional filters
         filters_layout = QHBoxLayout()
         
-        self.has_attachments = QCheckBox("Has attachments")
+        self.has_attachments = QCheckBox(_("email.view.search.filters.has_attachments"))
         filters_layout.addWidget(self.has_attachments)
         
-        self.unread_only = QCheckBox("Unread only")
+        self.unread_only = QCheckBox(_("email.view.search.filters.unread_only"))
         filters_layout.addWidget(self.unread_only)
         
-        self.flagged_only = QCheckBox("Flagged only")
+        self.flagged_only = QCheckBox(_("email.view.search.filters.flagged_only"))
         filters_layout.addWidget(self.flagged_only)
         
         filters_layout.addStretch()
         
         # Search buttons
-        search_btn = QPushButton("Search")
-        search_btn.clicked.connect(self.perform_search)
-        search_btn.setDefault(True)
-        filters_layout.addWidget(search_btn)
+        self.search_button = QPushButton(_("email.view.search.buttons.search"))
+        self.search_button.clicked.connect(self.perform_search)
+        filters_layout.addWidget(self.search_button)
         
-        clear_btn = QPushButton("Clear")
-        clear_btn.clicked.connect(self.clear_search)
-        filters_layout.addWidget(clear_btn)
+        self.clear_button = QPushButton(_("email.view.search.buttons.clear"))
+        self.clear_button.clicked.connect(self.clear_search)
+        filters_layout.addWidget(self.clear_button)
         
-        close_btn = QPushButton("×")
-        close_btn.setMaximumWidth(30)
-        close_btn.clicked.connect(self.hide)
-        filters_layout.addWidget(close_btn)
+        self.close_button = QPushButton(_("email.view.search.buttons.close"))
+        self.close_button.clicked.connect(self.hide)
+        filters_layout.addWidget(self.close_button)
         
         layout.addLayout(filters_layout)
     
