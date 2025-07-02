@@ -1,105 +1,99 @@
-# Adelfa AppImage Build
+# Adelfa AppImage Build Instructions
 
-This directory contains the files and scripts needed to build an AppImage for the Adelfa email client.
+This directory contains the configuration and scripts needed to build Adelfa as an AppImage for Linux distribution.
 
-## Prerequisites
+## Console Flash Fix
 
-### System Requirements
-- Ubuntu 20.04+ / Debian 11+ (or compatible Linux distribution)
-- Python 3.12
-- Git
-- wget
-- Internet connection for downloading dependencies
+The AppImage has been optimized to prevent the brief console/Python code window that could appear when launching. This is achieved through:
 
-### Python Dependencies
-Install the required Python packages:
-```bash
-# From the project root
-python3.12 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
+1. **AppRun Script Enhancement**: Direct stdout suppression in the launch script
+2. **Console Logging Suppression**: When running as AppImage, console logging is disabled  
+3. **Environment Variables**: `ADELFA_APPIMAGE=1` flag enables AppImage-specific behavior
+4. **Error Handling**: Errors are still reported via stderr when necessary
+
+## Files
+
+- `AppImageBuilder.yml` - Main configuration for building the AppImage
+- `AppRun` - Shell script that launches the application with console suppression
+- `adelfa.desktop` - Desktop entry file for the application
 
 ## Building the AppImage
 
-### Method 1: Using AppImageBuilder (Recommended)
+### Prerequisites
 
-1. Install AppImageBuilder:
 ```bash
-pip3 install --user appimage-builder
+# Install appimage-builder
+pip install appimage-builder
+
+# Or using apt (Ubuntu/Debian)
+sudo apt install appimage-builder
 ```
 
-2. Run the simple build script:
+### Build Process
+
+1. Navigate to the project root:
 ```bash
-./scripts/build_appimage_simple.sh
+cd /path/to/Adelfa
 ```
 
-### Method 2: Manual Build (Advanced)
-
-Use the comprehensive build script that manually packages everything:
+2. Run the build:
 ```bash
-./scripts/build_appimage.sh
+cd appimage
+appimage-builder --recipe AppImageBuilder.yml
 ```
 
-## Files in this Directory
+3. The resulting AppImage will be created as `Adelfa-0.1.0-dev-x86_64.AppImage`
 
-- `AppRun` - Main entry point script for the AppImage
-- `adelfa.desktop` - Desktop entry file
-- `AppImageBuilder.yml` - Configuration for AppImageBuilder
-- `README.md` - This file
+### Testing the AppImage
 
-## Testing the AppImage
-
-After building, you'll get a file like `Adelfa-0.1.0-dev-x86_64.AppImage` in the project root.
-
-To test it:
 ```bash
+# Make executable
 chmod +x Adelfa-0.1.0-dev-x86_64.AppImage
+
+# Test run
 ./Adelfa-0.1.0-dev-x86_64.AppImage
+
+# Test version
+./Adelfa-0.1.0-dev-x86_64.AppImage --version
 ```
+
+## Console Flash Prevention
+
+The console flash issue has been resolved through multiple layers:
+
+1. **AppRun Script**: Directly suppresses stdout while preserving stderr for errors
+2. **Environment Setup**: Sets `ADELFA_APPIMAGE=1` to enable AppImage-specific behavior  
+3. **Application Code**: Disables console logging when `ADELFA_APPIMAGE=1` is set
+4. **Error Suppression**: Print statements are suppressed in AppImage mode
+
+This ensures a clean, professional application launch without any visible console windows.
 
 ## Troubleshooting
 
-### Common Issues
+### Build Issues
 
-1. **Qt libraries not found**
-   - Ensure you have Qt6 development packages installed:
-   ```bash
-   sudo apt install qt6-base-dev qt6-tools-dev-tools
-   ```
+- Ensure all dependencies are installed in the build environment
+- Check that `AppRun` is executable: `chmod +x AppRun`
+- Verify Python 3.12 and PyQt6 are available
 
-2. **Python 3.12 not found**
-   - Install Python 3.12:
-   ```bash
-   sudo apt install python3.12 python3.12-dev python3.12-venv
-   ```
+### Runtime Issues
 
-3. **AppImageBuilder fails**
-   - Check that all dependencies are installed
-   - Try the manual build method instead
+- If the AppImage fails to start, check for error messages in terminal
+- Ensure the AppImage is executable: `chmod +x Adelfa-*.AppImage`
+- Test in different Linux distributions using the test configurations
 
-4. **Permission denied**
-   - Make sure the build scripts are executable:
-   ```bash
-   chmod +x scripts/build_appimage*.sh appimage/AppRun
-   ```
+### Console Flash Still Appears
 
-## Distribution
+If you still see a brief console flash:
 
-The resulting AppImage is self-contained and can be distributed to users on any Linux distribution that supports AppImage.
+1. Verify `ADELFA_APPIMAGE` environment variable is set in AppRun
+2. Check that AppRun has proper file permissions: `chmod +x AppRun`
+3. Ensure stdout redirection is working: `>/dev/null` in AppRun script
 
-The AppImage includes:
-- Python 3.12 runtime
-- All Python dependencies
-- Qt6 libraries
-- Application source code
-- Required system libraries
+## Development vs AppImage Mode
 
-## Size Optimization
+The application automatically detects the execution environment:
 
-The AppImage will be quite large (300-500MB) due to including the full Python runtime and Qt libraries. This is normal for Python+Qt applications packaged as AppImages.
-
-To reduce size in the future:
-- Remove unused Python modules
-- Exclude unnecessary Qt plugins
-- Use UPX compression (if available) 
+- **Development Mode**: Console logging enabled, normal Python behavior
+- **AppImage Mode**: Console logging disabled, stdout suppressed
+- **Detection**: Based on `ADELFA_APPIMAGE` environment variable 

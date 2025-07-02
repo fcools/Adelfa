@@ -25,8 +25,31 @@ export LANG="${LANG:-en_US.UTF-8}"
 export ADELFA_APPIMAGE=1
 export ADELFA_PORTABLE=1
 
+# Set Python environment variables to minimize startup output
+export PYTHONDONTWRITEBYTECODE=1
+export PYTHONUNBUFFERED=1
+export PYTHONWARNINGS=ignore
+export PYTHONIOENCODING=utf-8
+
+# Set Qt environment to prevent debug output and screen buffer issues
+export QT_LOGGING_RULES="*=false"
+export QT_QPA_PLATFORM_PLUGIN_PATH="${HERE}/usr/lib/x86_64-linux-gnu/qt6/plugins/platforms"
+
+# Comprehensive Qt dual-monitor fixes to prevent screen buffer flash
+export QT_X11_NO_MITSHM=1  # Prevents X11 shared memory screen buffer issues
+export QT_XCB_GL_INTEGRATION=none  # Disable OpenGL integration
+export QT_QUICK_BACKEND=software  # Force software rendering
+export QT_QPA_PLATFORM=xcb:force-xinerama  # Force Xinerama for proper multi-monitor detection
+export QT_AUTO_SCREEN_SCALE_FACTOR=0  # Disable automatic screen scaling
+export QT_SCREEN_SCALE_FACTORS=""  # Clear any screen scale factors
+
 # Change to a writable directory to avoid permission issues
 cd "${HOME}" 2>/dev/null || cd /tmp
 
-# Launch the application
-exec "${HERE}/usr/bin/python3" "${HERE}/usr/src/main.py" "$@" 
+# Launch with maximum console suppression to prevent any flash
+# Close all file descriptors and detach completely from terminal
+exec > /dev/null 2>&1 < /dev/null
+setsid "${HERE}/usr/bin/python3" -B -q -O "${HERE}/usr/src/main.py" "$@" &
+
+# Exit immediately to prevent any console display
+exit 0

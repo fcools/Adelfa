@@ -85,18 +85,8 @@ else
     echo "<?xml version='1.0'?><svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><rect width='64' height='64' fill='blue'/></svg>" > "$APPDIR/adelfa.svg"
 fi
 
-# Create a simple wrapper script to handle Python path
-echo "🔧 Creating Python wrapper..."
-cat > "$APPDIR/usr/bin/python3-wrapper" << 'EOF'
-#!/bin/bash
-HERE="$(dirname "$(readlink -f "${0}")")"
-export PYTHONPATH="$HERE/../lib/python3.12/site-packages:$HERE/../src:$PYTHONPATH"
-exec "$HERE/python3" "$@"
-EOF
-chmod +x "$APPDIR/usr/bin/python3-wrapper"
-
-# Update AppRun to use the wrapper
-sed -i 's|"${HERE}/usr/bin/python3"|"${HERE}/usr/bin/python3-wrapper"|' "$APPDIR/AppRun"
+# Note: AppRun script already handles PYTHONPATH correctly, no wrapper needed
+echo "✅ Using AppRun script as-is (already has proper PYTHONPATH and console suppression)"
 
 # Download appimagetool if not present
 APPIMAGETOOL="$BUILD_DIR/appimagetool-x86_64.AppImage"

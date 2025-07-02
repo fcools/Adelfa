@@ -126,8 +126,21 @@ def main() -> int:
     session = None
     
     try:
-        # Set up logging
-        setup_logging()
+        # Set up logging (disable console output in AppImage to prevent flash)
+        is_appimage = os.getenv('ADELFA_APPIMAGE') == '1' or os.getenv('APPDIR') is not None
+        
+        # Set Qt environment variables to prevent screen buffer issues
+        if is_appimage:
+            # Comprehensive dual-monitor fixes
+            os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '0'
+            os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'
+            os.environ['QT_QPA_PLATFORM'] = 'xcb:force-xinerama'
+            os.environ['QT_X11_NO_MITSHM'] = '1'  # Prevents screen buffer sharing issues
+            os.environ['QT_XCB_GL_INTEGRATION'] = 'none'  # Disable OpenGL
+            os.environ['QT_QUICK_BACKEND'] = 'software'  # Force software rendering
+            os.environ['QT_SCREEN_SCALE_FACTORS'] = ''  # Clear scale factors
+            
+        setup_logging(console_output=not is_appimage)
         logger = get_logger(__name__)
         logger.info("Starting Adelfa Personal Information Manager...")
         
@@ -152,15 +165,51 @@ def main() -> int:
             )
             session = None
         
-        # Create and show main window
-        main_window = AdelfahMainWindow(config, session)
-        main_window.show()
+        # For AppImage, create a splash screen to prevent screen buffer flash
+        splash = None
+        if is_appimage:
+            from PyQt6.QtWidgets import QSplashScreen
+            from PyQt6.QtGui import QPixmap, QPainter
+            from PyQt6.QtCore import Qt
+            
+            # Create a solid color splash screen to cover any buffer flash
+            splash_pixmap = QPixmap(800, 600)
+            splash_pixmap.fill(Qt.GlobalColor.white)  # Solid white background
+            
+            # Add simple text
+            painter = QPainter(splash_pixmap)
+            painter.setPen(Qt.GlobalColor.black)
+            painter.drawText(splash_pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "Loading Adelfa...")
+            painter.end()
+            
+            splash = QSplashScreen(splash_pixmap)
+            splash.show()
+            app.processEvents()  # Ensure splash is displayed immediately
         
-        # Maximize window after it's shown and event loop has started
-        from PyQt6.QtCore import QTimer, Qt
-        def maximize_window():
-            main_window.setWindowState(Qt.WindowState.WindowMaximized)
-        QTimer.singleShot(100, maximize_window)
+        # Create main window but don't show it yet
+        main_window = AdelfahMainWindow(config, session)
+        
+        if is_appimage and splash:
+            # Give splash screen time to fully display and Qt to initialize
+            from PyQt6.QtCore import QTimer
+            def show_main_window():
+                if splash:
+                    splash.close()
+                main_window.show()
+                # Maximize window after a brief delay to ensure proper initialization
+                def maximize_window():
+                    main_window.setWindowState(Qt.WindowState.WindowMaximized)
+                QTimer.singleShot(100, maximize_window)
+            QTimer.singleShot(1000, show_main_window)  # Show after 1 second
+        else:
+            # Normal development mode
+            main_window.show()
+            
+            # Maximize window after it's shown and event loop has started
+            from PyQt6.QtCore import QTimer
+            def maximize_window():
+                main_window.setWindowState(Qt.WindowState.WindowMaximized)
+            QTimer.singleShot(100, maximize_window)
         
         logger.info("Application started successfully")
         
@@ -169,7 +218,10 @@ def main() -> int:
         
     except Exception as e:
         error_msg = f"Fatal error starting Adelfa: {e}"
-        print(error_msg, file=sys.stderr)
+        # Only print to stderr if not running as AppImage (to prevent console flash)
+        is_appimage = os.getenv('ADELFA_APPIMAGE') == '1' or os.getenv('APPDIR') is not None
+        if not is_appimage:
+            print(error_msg, file=sys.stderr)
         
         if app:
             QMessageBox.critical(
@@ -186,7 +238,10 @@ def main() -> int:
             try:
                 session.close()
             except Exception as e:
-                print(f"Error closing database session: {e}", file=sys.stderr)
+                # Only print to stderr if not running as AppImage (to prevent console flash)
+                is_appimage = os.getenv('ADELFA_APPIMAGE') == '1' or os.getenv('APPDIR') is not None
+                if not is_appimage:
+                    print(f"Error closing database session: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
